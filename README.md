@@ -1,10 +1,10 @@
 # WLED Preset Editor
 
-A standalone browser-based editor for WLED `presets.json` files. No installation, no server — just open the HTML file and drag in your file.
+A standalone browser-based editor for WLED `presets.json` files. No installation, no server.
 
 ## What it does
 
-Load a `presets.json` exported from your WLED device, edit it visually, and export it back. You can then upload the modified file to your device via the WLED web interface (Config > Security > Backup/Restore).
+Load a `presets.json` exported from your WLED device, edit it visually, and export it back.
 
 The editor lets you:
 
@@ -14,19 +14,21 @@ The editor lets you:
 - See a diff of what changed before confirming any save or bulk operation
 - View and copy the raw JSON of any preset
 
+## How to get the preset.json file
+
+Go to your WLED device web interface, click Config > Security > Backup/Restore and click "Download presets".
+
+You can then upload the modified file to your device via the same interface.
+
 ## Usage
 
-1. Open `index.html` in a browser
+1. Open https://spongeball.github.io/WLED-utils in your browser
 2. Click "Open Editor"
 3. Load your `presets.json` via the button or by dragging it onto the page
 4. Edit presets individually or select multiple with the checkboxes for bulk editing
 5. Export the result with "Export JSON" and upload it back to your WLED device
 
 The file never leaves your browser — everything runs locally.
-
-## Multi-select
-
-Clicking a preset row focuses it in the editor. The small checkbox on the left of each row adds it to the bulk selection independently. Shift-click on a row selects a range of checkboxes. The bulk edit panel appears automatically when at least one checkbox is ticked.
 
 ## Links
 
