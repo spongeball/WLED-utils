@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WLED Preset Editor</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Verdana, Geneva, sans-serif; font-size: 13px; background: #1a1a1a; color: #eee; min-height: 100vh; }
+
+/* TOP BAR */
+#topbar { background: #2d2d2d; border-bottom: 2px solid #444; padding: 8px 12px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+#topbar h1 { font-size: 15px; font-weight: bold; color: #fff; }
+#topbar span.ver { color: #888; font-size: 11px; }
+
+/* LAYOUT */
+#layout { display: flex; height: calc(100vh - 44px); }
+
+/* SIDEBAR */
+#sidebar { width: 215px; min-width: 160px; background: #222; border-right: 1px solid #444; display: flex; flex-direction: column; overflow: hidden; }
+#sidebar-head { padding: 6px 8px; background: #2d2d2d; border-bottom: 1px solid #444; display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+#sidebar-head .sel-info { font-size: 10px; color: #888; flex: 1; text-align: right; white-space: nowrap; }
+#preset-list { overflow-y: auto; flex: 1; }
+
+.preset-item { padding: 5px 8px; cursor: pointer; border-bottom: 1px solid #252525; display: flex; align-items: center; gap: 5px; user-select: none; }
+.preset-item:hover { background: #2a2a2a; }
+.preset-item.focused { background: #3a5f8a; }
+.preset-item.checked { background: #1e3050; }
+.preset-item.focused.checked { background: #3a5f8a; }
+
+/* Checkbox click area — separate from row click */
+.preset-item .pchk {
+  width: 14px; height: 14px; border: 1px solid #555; border-radius: 2px;
+  background: #1a1a1a; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 9px; color: #fff; cursor: pointer;
+}
+.preset-item.checked .pchk { background: #2a5080; border-color: #4a80b0; }
+.preset-item.checked .pchk::after { content: '\2713'; }
+.preset-item .pid { font-size: 10px; color: #777; min-width: 22px; text-align: right; }
+.preset-item .pname { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+.preset-item .pon { width: 7px; height: 7px; border-radius: 50%; background: #444; flex-shrink: 0; }
+.preset-item .pon.on { background: #5a5; }
+
+/* MAIN */
+#main { flex: 1; overflow-y: auto; padding: 12px; background: #1a1a1a; }
+#no-preset { color: #666; text-align: center; margin-top: 60px; font-size: 14px; }
+
+/* BULK BAR */
+#bulk-bar { display: none; background: #1e2a1e; border: 1px solid #3a5a3a; border-radius: 4px; margin-bottom: 10px; }
+#bulk-bar.visible { display: block; }
+#bulk-bar-head { background: #253025; border-bottom: 1px solid #3a5a3a; padding: 7px 10px; font-size: 12px; color: #8bc88a; font-weight: bold; border-radius: 4px 4px 0 0; }
+#bulk-bar-body { padding: 10px; }
+
+.bsec { margin-bottom: 10px; }
+.bsec-title { font-size: 10px; color: #5a8a5a; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; border-bottom: 1px solid #2a3a2a; padding-bottom: 3px; }
+.brow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 5px; }
+.brow .benbl { display: flex; align-items: center; gap: 5px; min-width: 155px; font-size: 11px; color: #aaa; cursor: pointer; }
+.brow .benbl input[type=checkbox] { accent-color: #5a8fc0; width: 13px; height: 13px; flex-shrink: 0; cursor: pointer; }
+.brow .benbl:hover { color: #ccc; }
+
+#bulk-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; border-top: 1px solid #2a4a2a; padding-top: 8px; }
+
+/* SECTIONS */
+.section { background: #252525; border: 1px solid #3a3a3a; border-radius: 4px; margin-bottom: 10px; }
+.section-head { background: #2d2d2d; border-bottom: 1px solid #3a3a3a; padding: 6px 10px; font-weight: bold; font-size: 12px; color: #ccc; cursor: pointer; display: flex; align-items: center; justify-content: space-between; user-select: none; border-radius: 4px 4px 0 0; }
+.section-head .arrow { font-size: 10px; color: #888; }
+.section-body { padding: 10px; }
+.section-body.collapsed { display: none; }
+
+/* FORM */
+.row { display: flex; align-items: center; margin-bottom: 7px; gap: 8px; flex-wrap: wrap; }
+.row label { min-width: 120px; color: #aaa; font-size: 12px; }
+.row .hint { font-size: 10px; color: #666; margin-left: 4px; }
+input[type="text"], input[type="number"], select { background: #1a1a1a; border: 1px solid #444; color: #eee; padding: 3px 6px; font-size: 12px; font-family: inherit; border-radius: 2px; height: 24px; }
+input[type="number"] { width: 70px; }
+input[type="text"] { width: 150px; }
+select { min-width: 150px; }
+input[type="range"] { width: 120px; accent-color: #5a8fc0; vertical-align: middle; }
+.range-val { min-width: 28px; text-align: center; font-size: 11px; color: #aaa; }
+input[type="checkbox"] { accent-color: #5a8fc0; width: 14px; height: 14px; cursor: pointer; }
+input[type="color"] { width: 32px; height: 24px; border: 1px solid #444; background: none; cursor: pointer; padding: 1px; border-radius: 2px; }
+
+/* SEGMENTS */
+.seg-card { background: #1e1e1e; border: 1px solid #3a3a3a; border-radius: 3px; margin-bottom: 8px; }
+.seg-card-head { background: #2a2a2a; padding: 5px 8px; font-size: 11px; color: #aaa; border-bottom: 1px solid #3a3a3a; display: flex; align-items: center; gap: 8px; }
+.seg-card-body { padding: 8px; }
+.colors-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-bottom: 7px; }
+.color-swatch { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #888; }
+
+/* BUTTONS */
+button { background: #3a3a3a; border: 1px solid #555; color: #ddd; padding: 3px 10px; font-size: 12px; font-family: inherit; cursor: pointer; border-radius: 2px; height: 24px; white-space: nowrap; }
+button:hover { background: #4a4a4a; border-color: #777; }
+button.primary { background: #3a5f8a; border-color: #5a8fc0; color: #fff; }
+button.primary:hover { background: #4a6f9a; }
+button.danger { background: #6a2020; border-color: #993333; color: #fcc; }
+button.danger:hover { background: #7a2a2a; }
+button.small { padding: 2px 7px; font-size: 11px; height: 20px; }
+
+/* RAW */
+#raw-json { background: #111; border: 1px solid #333; border-radius: 3px; padding: 8px; font-family: monospace; font-size: 11px; color: #8bc34a; white-space: pre; overflow-x: auto; max-height: 300px; overflow-y: auto; }
+
+/* TITLE BAR */
+#actions { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+#preset-title-bar { margin-bottom: 10px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+#preset-title-bar h2 { font-size: 15px; font-weight: bold; }
+.pid-badge { background: #3a5f8a; color: #fff; font-size: 10px; padding: 1px 6px; border-radius: 10px; }
+
+/* TABS */
+.tabs { display: flex; gap: 2px; margin-bottom: 10px; border-bottom: 1px solid #444; }
+.tab { padding: 5px 14px; cursor: pointer; font-size: 12px; color: #888; border: 1px solid transparent; border-bottom: none; border-radius: 3px 3px 0 0; margin-bottom: -1px; }
+.tab:hover { color: #ccc; }
+.tab.active { background: #252525; border-color: #444; border-bottom-color: #252525; color: #fff; }
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
+
+/* DROP ZONE */
+#drop-zone { border: 2px dashed #444; border-radius: 4px; padding: 20px; text-align: center; color: #666; cursor: pointer; font-size: 13px; }
+#drop-zone.dragover { border-color: #5a8fc0; color: #5a8fc0; }
+#drop-zone:hover { border-color: #666; }
+
+/* MODAL */
+#modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.72); z-index: 1000; align-items: center; justify-content: center; }
+#modal-overlay.visible { display: flex; }
+#modal { background: #2d2d2d; border: 1px solid #555; border-radius: 6px; width: 500px; max-width: 96vw; box-shadow: 0 8px 32px rgba(0,0,0,0.7); }
+#modal-head { background: #252525; border-bottom: 1px solid #444; padding: 10px 14px; font-weight: bold; font-size: 13px; border-radius: 6px 6px 0 0; display: flex; justify-content: space-between; align-items: center; }
+#modal-body { padding: 12px 14px; font-size: 12px; color: #ccc; }
+#modal-diff { background: #1a1a1a; border: 1px solid #333; border-radius: 3px; padding: 8px; font-family: monospace; font-size: 11px; max-height: 220px; overflow-y: auto; margin-top: 10px; color: #aaa; line-height: 1.5; }
+.diff-add { color: #7bc87a; }
+.diff-remove { color: #c87a7a; }
+#modal-foot { padding: 10px 14px; border-top: 1px solid #444; display: flex; justify-content: flex-end; gap: 8px; }
+#modal-x { cursor: pointer; color: #888; font-size: 16px; background: none; border: none; height: auto; padding: 0; }
+#modal-x:hover { color: #fff; background: none; }
+
+/* MISC */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #1a1a1a; }
+::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+select option { background: #222; color: #eee; }
+hr.sep { border: none; border-top: 1px solid #333; margin: 8px 0; }
+
+/* TOAST */
+#toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #2d4a2d; border: 1px solid #5a8a5a; color: #8bc88a; padding: 7px 18px; border-radius: 3px; font-size: 12px; opacity: 0; pointer-events: none; transition: opacity 0.2s; z-index: 2000; white-space: nowrap; }
+#toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div id="toast"></div>
+
+<!-- MODAL -->
+<div id="modal-overlay">
+  <div id="modal">
+    <div id="modal-head">
+      <span id="modal-title">Confirm</span>
+      <button id="modal-x" onclick="closeModal()">&#x2715;</button>
+    </div>
+    <div id="modal-body">
+      <div id="modal-desc"></div>
+      <div id="modal-diff" style="display:none"></div>
+    </div>
+    <div id="modal-foot">
+      <button onclick="closeModal()">Cancel</button>
+      <button class="primary" id="modal-ok">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <h1>&#x26A1; WLED Preset Editor</h1>
+  <span class="ver">presets.json</span>
+  <div style="flex:1"></div>
+  <button onclick="triggerLoad()">&#x1F4C2; Load JSON</button>
+  <button class="primary" onclick="confirmExport()">&#x1F4BE; Export JSON</button>
+  <input type="file" id="file-input" accept=".json" style="display:none" onchange="loadFile(event)">
+</div>
+
+<div id="layout">
+  <!-- SIDEBAR -->
+  <div id="sidebar">
+    <div id="sidebar-head">
+      <button class="small primary" onclick="addPreset()">+ New</button>
+      <button class="small danger" onclick="confirmDelete()">&#x2715; Del</button>
+      <button class="small" onclick="selectAll()">[all]</button>
+      <button class="small" onclick="deselectAll()">[none]</button>
+      <span class="sel-info" id="sel-info">0 sel</span>
+    </div>
+    <div id="preset-list"></div>
+  </div>
+
+  <!-- MAIN -->
+  <div id="main">
+    <div id="no-preset">
+      <div style="font-size:40px;margin-bottom:12px">&#x1F4A1;</div>
+      <div>Load a <strong>presets.json</strong> file or drag &amp; drop it here.</div>
+      <br>
+      <div id="drop-zone" onclick="triggerLoad()">Drop presets.json here or click to browse</div>
+    </div>
+
+    <!-- BULK BAR: shown when ≥1 preset is checked -->
+    <div id="bulk-bar">
+      <div id="bulk-bar-head">
+        &#x26A1; Bulk edit &mdash; <span id="bulk-count">0</span> presets checked
+        <span style="font-size:10px;color:#5a7a5a;font-weight:normal;margin-left:8px">Spunta un campo per includerlo</span>
+      </div>
+      <div id="bulk-bar-body">
+
+        <!-- PRESET LEVEL -->
+        <div class="bsec">
+          <div class="bsec-title">Preset</div>
+          <div class="brow">
+            <label class="benbl"><input type="checkbox" id="be-on-en"> On/Off</label>
+            <input type="checkbox" id="be-on"> <span style="font-size:11px;color:#aaa">On</span>
+          </div>
+          <div class="brow">
+            <label class="benbl"><input type="checkbox" id="be-bri-en"> Brightness (bri)</label>
+            <input type="range" id="be-bri" min="0" max="255" value="128" oninput="syncRange(this,'be-bri-n')">
+            <span class="range-val" id="be-bri-n">128</span>
+          </div>
+          <div class="brow">
+            <label class="benbl"><input type="checkbox" id="be-tr-en"> Transition</label>
+            <input type="number" id="be-tr" min="0" max="65535" value="7" style="width:70px">
+            <span style="font-size:10px;color:#666">x100ms</span>
+          </div>
+          <div class="brow">
+            <label class="benbl"><input type="checkbox" id="be-mainseg-en"> Main segment</label>
+            <input type="number" id="be-mainseg" min="0" max="31" value="0" style="width:55px">
+          </div>
+        </div>
+
+        <!-- SEGMENT 0 — RANGE -->
+        <div class="bsec">
+          <div class="bsec-title">Segment 0 &mdash; LED range</div>
+          <div class="brow">
+            <label class="benbl"><input type="checkbox" id="be-start-en"> Start LED</label>
+            <input type="number" id="be-start" min="0" value="0" style="width:65px">
+          </div>
+          <div class="brow">
+            <label class="benbl"><input type="checkbox" id="be-stop-en"> Stop LED</label>
+            <input type="number" id="be-stop" min="0" value="144" style="width:65px">
+            <span style="font-size:10px;color:#666">exclusive</span>
+          </div>
+          <div class="brow">
+            <label class="benbl"><input type="checkbox" id="be-grp-en"> Group (grp)</label>
+            <input type="number" id="be-grp" min="1" max="255" value="1" style="width:55px">
+          </div>
+          <div class="brow">
+            <label class="benbl"><input type="checkbox" id="be-spc-en"> Spacing (spc)</label>
+            <input type="number" id="be-spc" min="0" max="255" value="0" style="width:55px">
+          </div>
+          <div class="brow">
+            <label class="benbl"><input type="checkbox" id="be-of-en"> Offset (of)</label>
+            <input type="number" id="be-of" value="0" style="width:55px">
+          </div>
+        </div>
+
+        <!-- SEGMENT 0 — FLAGS -->
+        <div class="bsec">
+          <div class="bsec-title">Segment 0 &mdash; Flags</div>
+          <div class="brow">
+            <label class="benbl"><input type="checkbox" id="be-son-en"> Seg On</label>
+            <input type="checkbox" id="be-son" checked> <span style="font-size:11px;color:#aaa">On</span>
+          </div>
+          <div class="brow">
+            <label class="benbl"><input type="checkbox" id="be-rev-en"> Reverse (rev)</label>
+            <input type="checkbox" id="be-rev">
+          </div>
+          <div class="brow">
+            <label class="benbl"><input type="checkbox" id="be-mi-en"> Mirror (mi)</label>
+            <input type="checkbox" id="be-mi">
+          </div>
+          <div class="brow">
+            <label class="benbl"><input type="checkbox" id="be-frz-en"> Freeze (frz)</label>
+            <input type="checkbox" id="be-frz">
+          </div>
+          <div class="brow">
+            <label class="benbl"><input type="checkbox" id="be-sbri-en"> Seg brightness</label>
+            <input type="range" id="be-sbri" min="0" max="255" value="255" oninput="syncRange(this,'be-sbri-n')">
+            <span class="range-val" id="be-sbri-n">255</span>
+          </div>
+          <div class="brow">
+            <label class="benbl"><input type="checkbox" id="be-cct-en"> CCT</label>
+            <input type="range" id="be-cct" min="0" max="255" value="127" oninput="syncRange(this,'be-cct-n')">
+            <span class="range-val" id="be-cct-n">127</span>
+          </div>
+        </div>
+
+        <!-- SEGMENT 0 — EFFECT -->
+        <div class="bsec">
+          <div class="bsec-title">Segment 0 &mdash; Effect</div>
+          <div class="brow">
+            <label class="benbl"><input type="checkbox" id="be-fx-en"> Effect (fx)</label>
+            <select id="be-fx" style="min-width:200px"></select>
+          </div>
+          <div class="brow">
+            <label class="benbl"><input type="checkbox" id="be-sx-en"> Speed (sx)</label>
+            <input type="range" id="be-sx" min="0" max="255" value="128" oninput="syncRange(this,'be-sx-n')">
+            <span class="range-val" id="be-sx-n">128</span>
+          </div>
+          <div class="brow">
+            <label class="benbl"><input type="checkbox" id="be-ix-en"> Intensity (ix)</label>
+            <input type="range" id="be-ix" min="0" max="255" value="128" oninput="syncRange(this,'be-ix-n')">
+            <span class="range-val" id="be-ix-n">128</span>
+          </div>
+          <div class="brow">
+            <label class="benbl"><input type="checkbox" id="be-c1-en"> Custom 1 (c1)</label>
+            <input type="range" id="be-c1" min="0" max="255" value="128" oninput="syncRange(this,'be-c1-n')">
+            <span class="range-val" id="be-c1-n">128</span>
+          </div>
+          <div class="brow">
+            <label class="benbl"><input type="checkbox" id="be-c2-en"> Custom 2 (c2)</label>
+            <input type="range" id="be-c2" min="0" max="255" value="128" oninput="syncRange(this,'be-c2-n')">
+            <span class="range-val" id="be-c2-n">128</span>
+          </div>
+          <div class="brow">
+            <label class="benbl"><input type="checkbox" id="be-c3-en"> Custom 3 (c3)</label>
+            <input type="range" id="be-c3" min="0" max="255" value="16" oninput="syncRange(this,'be-c3-n')">
+            <span class="range-val" id="be-c3-n">16</span>
+          </div>
+          <div class="brow">
+            <label class="benbl"><input type="checkbox" id="be-pal-en"> Palette (pal)</label>
+            <select id="be-pal" style="min-width:200px"></select>
+          </div>
+        </div>
+
+        <!-- SEGMENT 0 — COLORS -->
+        <div class="bsec">
+          <div class="bsec-title">Segment 0 &mdash; Colors</div>
+          <div class="brow">
+            <label class="benbl"><input type="checkbox" id="be-col0-en"> Primary color</label>
+            <input type="color" id="be-col0" value="#ffffff">
+          </div>
+          <div class="brow">
+            <label class="benbl"><input type="checkbox" id="be-col1-en"> Secondary color</label>
+            <input type="color" id="be-col1" value="#000000">
+          </div>
+          <div class="brow">
+            <label class="benbl"><input type="checkbox" id="be-col2-en"> Tertiary color</label>
+            <input type="color" id="be-col2" value="#000000">
+          </div>
+        </div>
+
+        <!-- SEGMENT 0 — ADVANCED -->
+        <div class="bsec">
+          <div class="bsec-title">Segment 0 &mdash; Advanced</div>
+          <div class="brow">
+            <label class="benbl"><input type="checkbox" id="be-o1-en"> Option 1 (o1)</label>
+            <input type="checkbox" id="be-o1">
+          </div>
+          <div class="brow">
+            <label class="benbl"><input type="checkbox" id="be-o2-en"> Option 2 (o2)</label>
+            <input type="checkbox" id="be-o2">
+          </div>
+          <div class="brow">
+            <label class="benbl"><input type="checkbox" id="be-o3-en"> Option 3 (o3)</label>
+            <input type="checkbox" id="be-o3">
+          </div>
+          <div class="brow">
+            <label class="benbl"><input type="checkbox" id="be-si-en"> Sound input (si)</label>
+            <input type="number" id="be-si" min="0" max="3" value="0" style="width:50px">
+          </div>
+          <div class="brow">
+            <label class="benbl"><input type="checkbox" id="be-m12-en"> Map (m12)</label>
+            <input type="number" id="be-m12" min="0" max="5" value="0" style="width:50px">
+          </div>
+        </div>
+
+        <div id="bulk-actions">
+          <button class="primary" onclick="confirmBulkApply()">&#x2714; Apply to checked presets</button>
+          <button onclick="deselectAll()">Clear selection</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SINGLE EDITOR -->
+    <div id="editor" style="display:none">
+      <div id="preset-title-bar">
+        <span class="pid-badge" id="pid-badge">#1</span>
+        <h2 id="preset-heading">Preset</h2>
+      </div>
+      <div id="actions">
+        <button class="primary" onclick="confirmSave()">&#x2714; Save changes</button>
+        <button class="danger small" onclick="confirmDelete()">&#x2715; Delete</button>
+      </div>
+      <div class="tabs">
+        <div class="tab active" onclick="switchTab('general',this)">General</div>
+        <div class="tab" onclick="switchTab('segments',this)">Segments</div>
+        <div class="tab" onclick="switchTab('raw',this)">Raw JSON</div>
+      </div>
+      <div class="tab-pane active" id="tab-general">
+        <div class="section">
+          <div class="section-head" onclick="toggleSection(this)"><span>Preset Info</span><span class="arrow">&#9660;</span></div>
+          <div class="section-body">
+            <div class="row"><label>Name (n)</label><input type="text" id="f-name" placeholder="Preset name"></div>
+            <div class="row"><label>Quick Label (ql)</label><input type="text" id="f-ql" placeholder="e.g. gi" maxlength="2" style="width:60px"><span class="hint">2-char shortcut</span></div>
+            <div class="row"><label>ID</label><input type="number" id="f-id" min="1" max="250"><span class="hint">1-250</span></div>
+          </div>
+        </div>
+        <div class="section">
+          <div class="section-head" onclick="toggleSection(this)"><span>Global State</span><span class="arrow">&#9660;</span></div>
+          <div class="section-body">
+            <div class="row"><label>On (on)</label><input type="checkbox" id="f-on"></div>
+            <div class="row"><label>Brightness (bri)</label><input type="range" id="f-bri" min="0" max="255" oninput="syncRange(this,'f-bri-n')"><span class="range-val" id="f-bri-n">255</span></div>
+            <div class="row"><label>Transition</label><input type="number" id="f-transition" min="0" max="65535" style="width:80px"><span class="hint">x100ms</span></div>
+            <div class="row"><label>Main segment</label><input type="number" id="f-mainseg" min="0" max="31" style="width:60px"></div>
+          </div>
+        </div>
+      </div>
+      <div class="tab-pane" id="tab-segments">
+        <div id="segments-container"></div>
+        <button onclick="addSegment()" style="margin-top:4px">+ Add segment</button>
+      </div>
+      <div class="tab-pane" id="tab-raw">
+        <button onclick="collectEdits();renderRaw()" style="margin-bottom:6px">&#x21BB; Refresh</button>
+        <button onclick="copyRaw()" style="margin-bottom:6px">&#x1F4CB; Copy</button>
+        <div id="raw-json"></div>
+      </div>
+    </div>
+  </div><!-- /main -->
+</div><!-- /layout -->
+
+<script>
+// ─── WLED LOOKUP TABLES ───────────────────────────────────────────────────────
+const EFFECTS = {0:"Solid",1:"Blink",2:"Breathe",3:"Wipe",4:"Wipe Random",5:"Random Colors",6:"Sweep",7:"Dynamic",8:"Colorloop",9:"Rainbow",10:"Scan",11:"Scan Dual",12:"Fade",13:"Theater",14:"Theater Rainbow",15:"Running",16:"Saw",17:"Twinkle",18:"Dissolve",19:"Dissolve Rnd",20:"Sparkle",21:"Sparkle Dark",22:"Sparkle+",23:"Strobe",24:"Strobe Rainbow",25:"Strobe Mega",26:"Blink Rainbow",27:"Android",28:"Chase",29:"Chase Random",30:"Chase Rainbow",31:"Chase Flash",32:"Chase Flash Rnd",33:"Rainbow Runner",34:"Colorful",35:"Traffic Light",36:"Sweep Random",37:"Running 2",38:"Aurora",39:"Stream",40:"Scanner",41:"Lighthouse",42:"Fireworks",43:"Rain",44:"Merry Christmas",45:"Fire Flicker",46:"Gradient",47:"Loading",48:"Police",49:"Police All",50:"Two Dots",51:"Two Areas",52:"Running Dual",53:"Halloween",54:"Tri Chase",55:"Tri Wipe",56:"Tri Fade",57:"Lightning",58:"ICU",59:"Multi Comet",60:"Scanner Dual",61:"Stream 2",62:"Oscillate",63:"Pride 2015",64:"Juggle",65:"Palette",66:"Fire 2012",67:"Colorwaves",68:"Bpm",69:"Fill Noise",70:"Noise 1",71:"Noise 2",72:"Noise 3",73:"Noise 4",74:"Colortwinkles",75:"Lake",76:"Meteor",77:"Meteor Smooth",78:"Railway",79:"Ripple",80:"Twinklefox",81:"Twinklecat",82:"Halloween Eyes",83:"Solid Pattern",84:"Solid Pattern Tri",85:"Spots",86:"Spots Fade",87:"Glitter",88:"Candle",89:"Fireworks Starburst",90:"Fireworks 1D",91:"Bouncing Balls",92:"Sinelon",93:"Sinelon Dual",94:"Sinelon Rainbow",95:"Popcorn",96:"Drip",97:"Plasma",98:"Percent",99:"Ripple Rainbow",100:"Heartbeat",101:"Pacifica",102:"Candle Multi",103:"Solid Glitter",104:"Sunrise",105:"Phased",106:"Twinkleup",107:"Noise Pal",108:"Sine",109:"Phased Noise",110:"Flow",111:"Chunchun",112:"Dancing Shadows",113:"Washing Machine",114:"Candy Cane",115:"Blends",116:"TV Simulator",117:"Dynamic Smooth"};
+const PALETTES = {0:"Default",1:"* Random Cycle",2:"* Color 1",3:"* Colors 1&2",4:"* Color Gradient",5:"* Colors Only",6:"Party",7:"Cloud",8:"Lava",9:"Ocean",10:"Forest",11:"Rainbow",12:"Rainbow Bands",13:"Sunset",14:"Rivendell",15:"Breeze",16:"Red & Blue",17:"Yellowout",18:"Analogous",19:"Splash",20:"Pastel",21:"Sunset 2",22:"Beech",23:"Vintage",24:"Departure",25:"Landscape",26:"Beach",27:"Sherbet",28:"Hult",29:"Hult 64",30:"Drywet",31:"Jul",32:"Grintage",33:"Rewhi",34:"Tertiary",35:"Fire",36:"Icefire",37:"Cyane",38:"Light Pink",39:"Autumn",40:"Magenta",41:"Magred",42:"Yelmag",43:"Yelblu",44:"Orange & Teal",45:"Tiamat",46:"April Night",47:"Orangery",48:"C9",49:"Sakura",50:"Aurora",51:"Atlantica",52:"C9 2",53:"C9 New",54:"Temperature",55:"Aurora 2",56:"Retro Clown",57:"Candy",58:"Toxy Reaf",59:"Fairy Reaf",60:"Semi Blue",61:"Pink Candy",62:"Red Reaf",63:"Aqua Flash",64:"Yelblu Hot",65:"Lite Light",66:"Red Flash",67:"Blink Red",68:"Red Shift",69:"Red Tide",70:"Candy2"};
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let data = {};
+let focusedId = null;    // the preset open in the single editor (row click)
+let checkedIds = new Set(); // presets ticked via checkbox (bulk)
+let modalCb = null;
+
+// ─── INIT SELECTS ─────────────────────────────────────────────────────────────
+(function() {
+  const fx = document.getElementById('be-fx');
+  const pal = document.getElementById('be-pal');
+  Object.entries(EFFECTS).forEach(([k,v]) => { const o=document.createElement('option'); o.value=k; o.textContent=k+': '+v; fx.appendChild(o); });
+  Object.entries(PALETTES).forEach(([k,v]) => { const o=document.createElement('option'); o.value=k; o.textContent=k+': '+v; pal.appendChild(o); });
+})();
+
+// ─── FILE IO ──────────────────────────────────────────────────────────────────
+function triggerLoad() { document.getElementById('file-input').click(); }
+function loadFile(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      data = JSON.parse(ev.target.result);
+      focusedId = null; checkedIds.clear();
+      buildSidebar();
+      document.getElementById('no-preset').style.display = 'none';
+      document.getElementById('editor').style.display = 'none';
+      document.getElementById('bulk-bar').classList.remove('visible');
+    } catch(err) { alert('Invalid JSON: ' + err.message); }
+  };
+  reader.readAsText(file); e.target.value = '';
+}
+// drag & drop
+document.body.addEventListener('dragover', e => { e.preventDefault(); document.getElementById('drop-zone').classList.add('dragover'); });
+document.body.addEventListener('dragleave', () => document.getElementById('drop-zone').classList.remove('dragover'));
+document.body.addEventListener('drop', e => { e.preventDefault(); document.getElementById('drop-zone').classList.remove('dragover'); const f=e.dataTransfer.files[0]; if(f) loadFile({target:{files:[f]}}); });
+
+// ─── EXPORT ───────────────────────────────────────────────────────────────────
+function confirmExport() {
+  if (focusedId) collectEdits();
+  const keys = visibleKeys();
+  const diff = keys.map(k=>`<div class="diff-add">#${k} &mdash; ${esc(data[k].n||'(unnamed)')}</div>`).join('');
+  showModal('Export presets.json', `Export <strong>${keys.length}</strong> presets?`, diff, () => {
+    const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+    const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='presets.json';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  });
+}
+
+// ─── SIDEBAR ─────────────────────────────────────────────────────────────────
+function visibleKeys() {
+  return Object.keys(data).filter(k => k!=='0' && Object.keys(data[k]).length > 0).sort((a,b) => +a-+b);
+}
+
+function buildSidebar() {
+  const list = document.getElementById('preset-list');
+  list.innerHTML = '';
+  visibleKeys().forEach(k => {
+    const p = data[k];
+    const isFocused = k === focusedId;
+    const isChecked = checkedIds.has(k);
+    const div = document.createElement('div');
+    div.className = 'preset-item' + (isFocused ? ' focused' : '') + (isChecked ? ' checked' : '');
+    div.dataset.id = k;
+
+    // Checkbox — toggles checked state, independent of focus
+    const chk = document.createElement('div');
+    chk.className = 'pchk';
+    chk.title = 'Select for bulk edit';
+    chk.addEventListener('click', e => { e.stopPropagation(); toggleChecked(k); });
+
+    const pid = document.createElement('span'); pid.className = 'pid'; pid.textContent = k;
+    const pname = document.createElement('span'); pname.className = 'pname'; pname.textContent = p.n || '(unnamed)';
+    const pon = document.createElement('span'); pon.className = 'pon' + (p.on !== false ? ' on' : '');
+
+    div.appendChild(chk); div.appendChild(pid); div.appendChild(pname); div.appendChild(pon);
+
+    // Row click = focus (open in editor), shift+click = range-check
+    div.addEventListener('click', e => {
+      if (e.shiftKey && focusedId !== null) {
+        rangeCheck(focusedId, k);
+      } else {
+        focusPreset(k);
+      }
+    });
+    list.appendChild(div);
+  });
+  updateSelInfo();
+  refreshBulkBar();
+}
+
+function toggleChecked(id) {
+  if (checkedIds.has(id)) checkedIds.delete(id);
+  else checkedIds.add(id);
+  buildSidebar();
+}
+
+function rangeCheck(fromId, toId) {
+  const keys = visibleKeys();
+  const a = keys.indexOf(fromId), b = keys.indexOf(toId);
+  const lo = Math.min(a,b), hi = Math.max(a,b);
+  keys.slice(lo, hi+1).forEach(k => checkedIds.add(k));
+  buildSidebar();
+}
+
+function focusPreset(id) {
+  if (focusedId !== null && focusedId !== id) collectEdits();
+  focusedId = id;
+  buildSidebar();
+  document.getElementById('no-preset').style.display = 'none';
+  document.getElementById('editor').style.display = 'block';
+  renderEditor();
+}
+
+function selectAll() { visibleKeys().forEach(k => checkedIds.add(k)); buildSidebar(); }
+function deselectAll() { checkedIds.clear(); buildSidebar(); }
+
+function updateSelInfo() {
+  document.getElementById('sel-info').textContent = checkedIds.size + ' sel';
+}
+
+function refreshBulkBar() {
+  const bar = document.getElementById('bulk-bar');
+  if (checkedIds.size > 0) {
+    bar.classList.add('visible');
+    document.getElementById('bulk-count').textContent = checkedIds.size;
+  } else {
+    bar.classList.remove('visible');
+  }
+}
+
+// ─── SINGLE EDITOR ────────────────────────────────────────────────────────────
+function renderEditor() {
+  const p = data[focusedId]; if (!p) return;
+  document.getElementById('pid-badge').textContent = '#' + focusedId;
+  document.getElementById('preset-heading').textContent = p.n || '(unnamed)';
+  document.getElementById('f-name').value = p.n || '';
+  document.getElementById('f-ql').value = p.ql || '';
+  document.getElementById('f-id').value = focusedId;
+  document.getElementById('f-on').checked = p.on !== false;
+  setRange('f-bri','f-bri-n', p.bri ?? 255);
+  document.getElementById('f-transition').value = p.transition ?? '';
+  document.getElementById('f-mainseg').value = p.mainseg ?? 0;
+  renderSegments(p.seg || []);
+  renderRaw();
+}
+
+function collectEdits() {
+  if (!focusedId) return;
+  const p = data[focusedId] || {};
+  p.n = document.getElementById('f-name').value || undefined;
+  const ql = document.getElementById('f-ql').value;
+  if (ql) p.ql = ql; else delete p.ql;
+  const newId = String(document.getElementById('f-id').value);
+  p.on = document.getElementById('f-on').checked;
+  p.bri = +document.getElementById('f-bri').value;
+  const tr = document.getElementById('f-transition').value;
+  if (tr !== '') p.transition = +tr; else delete p.transition;
+  p.mainseg = +document.getElementById('f-mainseg').value || 0;
+  collectSegments(p);
+
+  if (newId && newId !== focusedId && !data[newId]) {
+    data[newId] = p; delete data[focusedId];
+    if (checkedIds.has(focusedId)) { checkedIds.delete(focusedId); checkedIds.add(newId); }
+    focusedId = newId;
+  } else {
+    data[focusedId] = p;
+  }
+}
+
+function confirmSave() {
+  const snap = JSON.parse(JSON.stringify(data[focusedId]));
+  collectEdits();
+  const p = data[focusedId];
+  const diff = buildDiff(snap, p);
+  showModal('Save preset #' + focusedId, 'Save changes to <strong>' + esc(p.n||'(unnamed)') + '</strong>?', diff, () => {
+    buildSidebar(); renderEditor(); showToast('\u2714 Preset salvato');
+  });
+}
+
+// ─── SEGMENTS ────────────────────────────────────────────────────────────────
+function renderSegments(segs) {
+  const c = document.getElementById('segments-container'); c.innerHTML = '';
+  const active = segs.filter(s => s && Object.keys(s).length > 1 && (s.stop > 0 || s.id !== undefined));
+  if (!active.length) { c.innerHTML = '<div style="color:#666;font-size:12px">No active segments.</div>'; return; }
+  active.forEach(s => c.appendChild(buildSegCard(s, segs.indexOf(s))));
+}
+
+function buildSegCard(seg, si) {
+  const card = document.createElement('div');
+  card.className = 'seg-card'; card.dataset.segidx = si;
+  const col = seg.col || [[255,255,255],[0,0,0],[0,0,0]];
+  const c0=rgb2hex(col[0]), c1=rgb2hex(col[1]), c2=rgb2hex(col[2]);
+  card.innerHTML = `
+    <div class="seg-card-head">
+      <strong>Seg ${si}</strong><span style="color:#666">${seg.start??0}&rarr;${seg.stop??0}</span>
+      <span style="flex:1"></span><button class="small danger" onclick="removeSegment(${si})">&#x2715;</button>
+    </div>
+    <div class="seg-card-body">
+      <div class="row"><label>LED start/stop</label>
+        <input type="number" class="sf" data-si="${si}" data-k="start" value="${seg.start??0}" min="0" style="width:60px">
+        <span style="color:#666">&ndash;</span>
+        <input type="number" class="sf" data-si="${si}" data-k="stop" value="${seg.stop??0}" min="0" style="width:60px">
+      </div>
+      <div class="row"><label>Name</label><input type="text" class="sf" data-si="${si}" data-k="n" value="${ea(seg.n||'')}" style="width:140px" placeholder="optional"></div>
+      <div class="row">
+        <label>On</label><input type="checkbox" class="sf" data-si="${si}" data-k="on" ${seg.on!==false?'checked':''}>
+        <label>Rev</label><input type="checkbox" class="sf" data-si="${si}" data-k="rev" ${seg.rev?'checked':''}>
+        <label>Mirror</label><input type="checkbox" class="sf" data-si="${si}" data-k="mi" ${seg.mi?'checked':''}>
+        <label>Freeze</label><input type="checkbox" class="sf" data-si="${si}" data-k="frz" ${seg.frz?'checked':''}>
+      </div>
+      <div class="row"><label>Brightness</label>
+        <input type="range" id="sbri-${si}" min="0" max="255" value="${seg.bri??255}" oninput="syncRange(this,'sbri-n-${si}')">
+        <span class="range-val" id="sbri-n-${si}">${seg.bri??255}</span>
+      </div>
+      <div class="row"><label>Grp / Spc / Offset</label>
+        <input type="number" class="sf" data-si="${si}" data-k="grp" value="${seg.grp??1}" min="1" max="255" style="width:52px">
+        <input type="number" class="sf" data-si="${si}" data-k="spc" value="${seg.spc??0}" min="0" max="255" style="width:52px">
+        <input type="number" class="sf" data-si="${si}" data-k="of" value="${seg.of??0}" style="width:52px">
+      </div>
+      <hr class="sep">
+      <div class="row"><label>Effect (fx)</label>
+        <select class="sf" data-si="${si}" data-k="fx" style="min-width:190px">
+          ${Object.entries(EFFECTS).map(([k,v])=>`<option value="${k}" ${+k===(seg.fx??0)?'selected':''}>${k}: ${v}</option>`).join('')}
+        </select>
+      </div>
+      <div class="row"><label>Speed / Intensity</label>
+        <input type="range" id="ssx-${si}" min="0" max="255" value="${seg.sx??128}" oninput="syncRange(this,'ssx-n-${si}')">
+        <span class="range-val" id="ssx-n-${si}">${seg.sx??128}</span>
+        <input type="range" id="six-${si}" min="0" max="255" value="${seg.ix??128}" oninput="syncRange(this,'six-n-${si}')">
+        <span class="range-val" id="six-n-${si}">${seg.ix??128}</span>
+      </div>
+      <div class="row"><label>Custom 1/2/3</label>
+        <input type="range" id="sc1-${si}" min="0" max="255" value="${seg.c1??128}" oninput="syncRange(this,'sc1-n-${si}')">
+        <span class="range-val" id="sc1-n-${si}">${seg.c1??128}</span>
+        <input type="range" id="sc2-${si}" min="0" max="255" value="${seg.c2??128}" oninput="syncRange(this,'sc2-n-${si}')">
+        <span class="range-val" id="sc2-n-${si}">${seg.c2??128}</span>
+        <input type="range" id="sc3-${si}" min="0" max="255" value="${seg.c3??16}" oninput="syncRange(this,'sc3-n-${si}')">
+        <span class="range-val" id="sc3-n-${si}">${seg.c3??16}</span>
+      </div>
+      <div class="row"><label>Palette (pal)</label>
+        <select class="sf" data-si="${si}" data-k="pal" style="min-width:190px">
+          ${Object.entries(PALETTES).map(([k,v])=>`<option value="${k}" ${+k===(seg.pal??0)?'selected':''}>${k}: ${v}</option>`).join('')}
+        </select>
+      </div>
+      <div class="row"><label>CCT</label>
+        <input type="range" id="scct-${si}" min="0" max="255" value="${seg.cct??127}" oninput="syncRange(this,'scct-n-${si}')">
+        <span class="range-val" id="scct-n-${si}">${seg.cct??127}</span>
+        <span class="hint">color temp</span>
+      </div>
+      <hr class="sep">
+      <div class="colors-row">
+        <label style="min-width:120px;color:#aaa;font-size:12px">Colors</label>
+        <div class="color-swatch"><span>Primary</span><input type="color" id="sc0-${si}" value="${c0}"></div>
+        <div class="color-swatch"><span>Secondary</span><input type="color" id="sc1c-${si}" value="${c1}"></div>
+        <div class="color-swatch"><span>Tertiary</span><input type="color" id="sc2c-${si}" value="${c2}"></div>
+      </div>
+      <div class="row"><label>o1/o2/o3</label>
+        <label>o1 <input type="checkbox" class="sf" data-si="${si}" data-k="o1" ${seg.o1?'checked':''}></label>
+        <label>o2 <input type="checkbox" class="sf" data-si="${si}" data-k="o2" ${seg.o2?'checked':''}></label>
+        <label>o3 <input type="checkbox" class="sf" data-si="${si}" data-k="o3" ${seg.o3?'checked':''}></label>
+      </div>
+      <div class="row"><label>Sound(si) / Map(m12)</label>
+        <input type="number" class="sf" data-si="${si}" data-k="si" value="${seg.si??0}" min="0" max="3" style="width:50px">
+        <input type="number" class="sf" data-si="${si}" data-k="m12" value="${seg.m12??0}" min="0" max="5" style="width:50px">
+      </div>
+    </div>`;
+  return card;
+}
+
+function collectSegments(p) {
+  if (!p.seg) return;
+  document.querySelectorAll('.seg-card').forEach(card => {
+    const si = +card.dataset.segidx, seg = p.seg[si]; if (!seg) return;
+    card.querySelectorAll('.sf').forEach(el => {
+      const k = el.dataset.k;
+      if (el.type==='checkbox') seg[k] = el.checked;
+      else if (el.type==='select-one'||el.type==='number') seg[k] = +el.value;
+      else { if (el.value!=='') seg[k]=el.value; else delete seg[k]; }
+    });
+    ['bri','sx','ix','c1','c2','c3','cct'].forEach(k => { const el=document.getElementById('s'+k+'-'+si); if(el) seg[k]=+el.value; });
+    [[0,'sc0'],[1,'sc1c'],[2,'sc2c']].forEach(([ci,pfx]) => {
+      const el = document.getElementById(pfx+'-'+si);
+      if (el) { if (!seg.col) seg.col=[[0,0,0],[0,0,0],[0,0,0]]; seg.col[ci]=hex2rgb(el.value); }
+    });
+  });
+}
+
+function addSegment() {
+  if (!focusedId) return; collectEdits();
+  const p = data[focusedId]; if (!p.seg) p.seg=[];
+  let idx = p.seg.findIndex(s => !s||Object.keys(s).length<=1);
+  if (idx===-1) { p.seg.push({}); idx=p.seg.length-1; }
+  p.seg[idx] = {id:idx,start:0,stop:30,grp:1,spc:0,of:0,on:true,frz:false,bri:255,cct:127,set:0,col:[[255,255,255],[0,0,0],[0,0,0]],fx:0,sx:128,ix:128,pal:0,c1:128,c2:128,c3:16,sel:true,rev:false,mi:false,o1:false,o2:false,o3:false,si:0,m12:0};
+  renderSegments(p.seg);
+}
+function removeSegment(si) {
+  if (!focusedId) return; collectEdits();
+  const p = data[focusedId];
+  if (p.seg && p.seg[si]) p.seg[si] = {stop:0};
+  renderSegments(p.seg || []);
+}
+
+// ─── BULK APPLY ───────────────────────────────────────────────────────────────
+// Returns map of { fieldKey: value } for all enabled fields
+function getBulkChanges() {
+  const r = {};
+  const num = (id) => +document.getElementById(id).value;
+  const chk = (id) => document.getElementById(id).checked;
+  const rng = (id) => +document.getElementById(id).value;
+  const col = (id) => hex2rgb(document.getElementById(id).value);
+
+  // preset level
+  if (chk('be-on-en'))      r.on        = chk('be-on');
+  if (chk('be-bri-en'))     r.bri       = rng('be-bri');
+  if (chk('be-tr-en'))      r.transition= num('be-tr');
+  if (chk('be-mainseg-en')) r.mainseg   = num('be-mainseg');
+  // seg0 range
+  if (chk('be-start-en'))   r._start    = num('be-start');
+  if (chk('be-stop-en'))    r._stop     = num('be-stop');
+  if (chk('be-grp-en'))     r._grp      = num('be-grp');
+  if (chk('be-spc-en'))     r._spc      = num('be-spc');
+  if (chk('be-of-en'))      r._of       = num('be-of');
+  // seg0 flags
+  if (chk('be-son-en'))     r._on       = chk('be-son');
+  if (chk('be-rev-en'))     r._rev      = chk('be-rev');
+  if (chk('be-mi-en'))      r._mi       = chk('be-mi');
+  if (chk('be-frz-en'))     r._frz      = chk('be-frz');
+  if (chk('be-sbri-en'))    r._sbri     = rng('be-sbri');
+  if (chk('be-cct-en'))     r._cct      = rng('be-cct');
+  // seg0 effect
+  if (chk('be-fx-en'))      r._fx       = num('be-fx');
+  if (chk('be-sx-en'))      r._sx       = rng('be-sx');
+  if (chk('be-ix-en'))      r._ix       = rng('be-ix');
+  if (chk('be-c1-en'))      r._c1       = rng('be-c1');
+  if (chk('be-c2-en'))      r._c2       = rng('be-c2');
+  if (chk('be-c3-en'))      r._c3       = rng('be-c3');
+  if (chk('be-pal-en'))     r._pal      = num('be-pal');
+  // seg0 colors
+  if (chk('be-col0-en'))    r._col0     = col('be-col0');
+  if (chk('be-col1-en'))    r._col1     = col('be-col1');
+  if (chk('be-col2-en'))    r._col2     = col('be-col2');
+  // seg0 advanced
+  if (chk('be-o1-en'))      r._o1       = chk('be-o1');
+  if (chk('be-o2-en'))      r._o2       = chk('be-o2');
+  if (chk('be-o3-en'))      r._o3       = chk('be-o3');
+  if (chk('be-si-en'))      r._si       = num('be-si');
+  if (chk('be-m12-en'))     r._m12      = num('be-m12');
+  return r;
+}
+
+const BULK_LABELS = {on:'On/Off',bri:'Brightness',transition:'Transition',mainseg:'Main seg',_start:'Start LED',_stop:'Stop LED',_grp:'Group',_spc:'Spacing',_of:'Offset',_on:'Seg On',_rev:'Reverse',_mi:'Mirror',_frz:'Freeze',_sbri:'Seg brightness',_cct:'CCT',_fx:'Effect',_sx:'Speed',_ix:'Intensity',_c1:'Custom1',_c2:'Custom2',_c3:'Custom3',_pal:'Palette',_col0:'Primary color',_col1:'Secondary color',_col2:'Tertiary color',_o1:'o1',_o2:'o2',_o3:'o3',_si:'Sound input',_m12:'Map'};
+
+function confirmBulkApply() {
+  const ch = getBulkChanges();
+  if (!Object.keys(ch).length) { alert('Abilita almeno un campo.'); return; }
+  const ids = [...checkedIds];
+  const fields = Object.keys(ch).map(k => BULK_LABELS[k]||k).join(', ');
+  let diff = `<div style="color:#888;font-size:10px;margin-bottom:4px">Campi: ${esc(fields)}</div>`;
+  diff += ids.slice(0,14).map(id=>`<div class="diff-add">#${id} &mdash; ${esc(data[id]?.n||'(unnamed)')}</div>`).join('');
+  if (ids.length > 14) diff += `<div style="color:#888">...e altri ${ids.length-14}</div>`;
+  showModal('Bulk edit &mdash; '+ids.length+' preset', 'Applicare a <strong>'+ids.length+'</strong> preset selezionati?', diff, () => doBulkApply(ch));
+}
+
+function doBulkApply(ch) {
+  [...checkedIds].forEach(id => {
+    const p = data[id]; if (!p) return;
+    // preset level
+    if ('on'         in ch) p.on         = ch.on;
+    if ('bri'        in ch) p.bri        = ch.bri;
+    if ('transition' in ch) p.transition = ch.transition;
+    if ('mainseg'    in ch) p.mainseg    = ch.mainseg;
+
+    // seg 0
+    const seg0 = p.seg && p.seg.find(s => s && Object.keys(s).length > 1);
+    if (seg0) {
+      if ('_start' in ch) seg0.start = ch._start;
+      if ('_stop'  in ch) seg0.stop  = ch._stop;
+      if ('_grp'   in ch) seg0.grp   = ch._grp;
+      if ('_spc'   in ch) seg0.spc   = ch._spc;
+      if ('_of'    in ch) seg0.of    = ch._of;
+      if ('_on'    in ch) seg0.on    = ch._on;
+      if ('_rev'   in ch) seg0.rev   = ch._rev;
+      if ('_mi'    in ch) seg0.mi    = ch._mi;
+      if ('_frz'   in ch) seg0.frz   = ch._frz;
+      if ('_sbri'  in ch) seg0.bri   = ch._sbri;
+      if ('_cct'   in ch) seg0.cct   = ch._cct;
+      if ('_fx'    in ch) seg0.fx    = ch._fx;
+      if ('_sx'    in ch) seg0.sx    = ch._sx;
+      if ('_ix'    in ch) seg0.ix    = ch._ix;
+      if ('_c1'    in ch) seg0.c1    = ch._c1;
+      if ('_c2'    in ch) seg0.c2    = ch._c2;
+      if ('_c3'    in ch) seg0.c3    = ch._c3;
+      if ('_pal'   in ch) seg0.pal   = ch._pal;
+      if ('_o1'    in ch) seg0.o1    = ch._o1;
+      if ('_o2'    in ch) seg0.o2    = ch._o2;
+      if ('_o3'    in ch) seg0.o3    = ch._o3;
+      if ('_si'    in ch) seg0.si    = ch._si;
+      if ('_m12'   in ch) seg0.m12   = ch._m12;
+      if ('_col0'  in ch || '_col1' in ch || '_col2' in ch) {
+        if (!seg0.col) seg0.col = [[0,0,0],[0,0,0],[0,0,0]];
+        if ('_col0' in ch) seg0.col[0] = ch._col0;
+        if ('_col1' in ch) seg0.col[1] = ch._col1;
+        if ('_col2' in ch) seg0.col[2] = ch._col2;
+      }
+    }
+  });
+  buildSidebar();
+  if (focusedId && checkedIds.has(focusedId)) renderEditor();
+  showToast('\u2714 Bulk applicato a ' + [...checkedIds].length + ' preset');
+}
+
+// ─── DELETE ───────────────────────────────────────────────────────────────────
+function confirmDelete() {
+  // Delete focused preset if nothing is checked, otherwise delete all checked
+  const ids = checkedIds.size > 0 ? [...checkedIds] : (focusedId ? [focusedId] : []);
+  if (!ids.length) { alert('Nessun preset selezionato.'); return; }
+  let diff = ids.slice(0,15).map(id=>`<div class="diff-remove">#${id} &mdash; ${esc(data[id]?.n||'(unnamed)')}</div>`).join('');
+  if (ids.length > 15) diff += `<div style="color:#888">...e altri ${ids.length-15}</div>`;
+  showModal('Elimina preset', 'Eliminare <strong>'+ids.length+'</strong> preset?', diff, () => {
+    ids.forEach(id => delete data[id]);
+    checkedIds.clear();
+    if (ids.includes(focusedId)) { focusedId = null; document.getElementById('editor').style.display='none'; }
+    buildSidebar();
+    if (!visibleKeys().length) document.getElementById('no-preset').style.display='block';
+  });
+}
+
+// ─── NEW ──────────────────────────────────────────────────────────────────────
+function addPreset() {
+  const id = String(nextId());
+  data[id] = {n:'New preset',on:true,bri:255,transition:7,mainseg:0,seg:[{id:0,start:0,stop:30,grp:1,spc:0,of:0,on:true,frz:false,bri:255,cct:127,set:0,col:[[255,255,255],[0,0,0],[0,0,0]],fx:0,sx:128,ix:128,pal:0,c1:128,c2:128,c3:16,sel:true,rev:false,mi:false,o1:false,o2:false,o3:false,si:0,m12:0}]};
+  document.getElementById('no-preset').style.display='none';
+  buildSidebar();
+  focusPreset(id);
+}
+function nextId() {
+  const ids = Object.keys(data).map(Number).filter(n=>!isNaN(n));
+  for (let i=1;i<=250;i++) if(!ids.includes(i)) return i; return 251;
+}
+
+// ─── MODAL ────────────────────────────────────────────────────────────────────
+function showModal(title, desc, diff, cb) {
+  document.getElementById('modal-title').innerHTML = title;
+  document.getElementById('modal-desc').innerHTML = desc;
+  const d = document.getElementById('modal-diff');
+  if (diff) { d.innerHTML=diff; d.style.display='block'; } else d.style.display='none';
+  modalCb = cb;
+  document.getElementById('modal-ok').onclick = () => { const fn=modalCb; closeModal(); if(fn) fn(); };
+  document.getElementById('modal-overlay').classList.add('visible');
+}
+function closeModal() { document.getElementById('modal-overlay').classList.remove('visible'); modalCb=null; }
+document.getElementById('modal-overlay').addEventListener('click', e => { if(e.target===document.getElementById('modal-overlay')) closeModal(); });
+
+// ─── RAW ──────────────────────────────────────────────────────────────────────
+function renderRaw() { if(!focusedId) return; document.getElementById('raw-json').textContent=JSON.stringify(data[focusedId],null,2); }
+function copyRaw() { navigator.clipboard.writeText(document.getElementById('raw-json').textContent).then(()=>alert('Copied!')); }
+
+// ─── DIFF ────────────────────────────────────────────────────────────────────
+function buildDiff(before, after) {
+  const allKeys = new Set([...Object.keys(before),...Object.keys(after)]);
+  let html = '';
+  allKeys.forEach(k => {
+    if (k==='seg') return;
+    const b=JSON.stringify(before[k]), a=JSON.stringify(after[k]);
+    if (b!==a) {
+      if (b!==undefined) html+=`<div class="diff-remove">- ${esc(k)}: ${esc(b)}</div>`;
+      if (a!==undefined) html+=`<div class="diff-add">+ ${esc(k)}: ${esc(a)}</div>`;
+    }
+  });
+  const segB=before.seg||[], segA=after.seg||[];
+  let sc=0; const ms=Math.max(segB.length,segA.length);
+  for(let i=0;i<ms;i++) if(JSON.stringify(segB[i])!==JSON.stringify(segA[i])) sc++;
+  if(sc) html+=`<div style="color:#aaa">~ segmenti: ${sc} modificati</div>`;
+  return html||'<span style="color:#666">Nessuna modifica.</span>';
+}
+
+// ─── TABS / SECTIONS ─────────────────────────────────────────────────────────
+function switchTab(name, el) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+  if (name==='raw') { collectEdits(); renderRaw(); }
+}
+function toggleSection(head) { const b=head.nextElementSibling,a=head.querySelector('.arrow'),c=b.classList.toggle('collapsed'); a.innerHTML=c?'&#9654;':'&#9660;'; }
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+function syncRange(el, outId) { document.getElementById(outId).textContent=el.value; }
+function setRange(rid,nid,v) { const e=document.getElementById(rid); e.value=v; document.getElementById(nid).textContent=v; }
+function rgb2hex(rgb) { if(!rgb||rgb.length<3) return '#000000'; return '#'+rgb.map(v=>(+v).toString(16).padStart(2,'0')).join(''); }
+function hex2rgb(h) { return [parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]; }
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function ea(s) { return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+let _toastTimer = null;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  if (_toastTimer) clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => t.classList.remove('show'), 2000);
+}
+</script>
+</body>
+</html>

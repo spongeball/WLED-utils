@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>WLED Preset Editor</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Verdana, Geneva, sans-serif; font-size: 13px; background: #1a1a1a; color: #eee; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 40px 16px; }
+.card { max-width: 560px; width: 100%; }
+h1 { font-size: 18px; font-weight: bold; color: #fff; margin-bottom: 6px; }
+.sub { color: #888; font-size: 12px; margin-bottom: 24px; }
+p { color: #bbb; line-height: 1.7; margin-bottom: 12px; }
+ul { color: #bbb; line-height: 1.8; margin-bottom: 12px; padding-left: 18px; }
+li { margin-bottom: 2px; }
+.btn { display: inline-block; background: #3a5f8a; border: 1px solid #5a8fc0; color: #fff; padding: 8px 22px; border-radius: 2px; text-decoration: none; font-size: 13px; margin-top: 8px; margin-bottom: 28px; }
+.btn:hover { background: #4a6f9a; }
+h2 { font-size: 13px; font-weight: bold; color: #aaa; margin-bottom: 8px; margin-top: 24px; text-transform: uppercase; letter-spacing: 0.5px; }
+.links { display: flex; flex-direction: column; gap: 4px; }
+.links a { color: #5a8fc0; text-decoration: none; font-size: 12px; }
+.links a:hover { text-decoration: underline; }
+hr { border: none; border-top: 1px solid #333; margin: 24px 0; }
+code { font-family: monospace; color: #aaa; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>WLED Preset Editor</h1>
+    <div class="sub">Standalone browser-based editor for presets.json</div>
+
+    <p>Load a <code>presets.json</code> exported from your WLED device, edit it visually, and export it back. No installation, no server — everything runs locally in the browser.</p>
+
+    <p>You can edit every field defined in the WLED JSON API: name, brightness, transition, on/off state, and all segment parameters including effect, speed, intensity, palette, colors, LED range, grouping, CCT, and custom sliders. Select multiple presets with the checkboxes to apply bulk changes across all of them at once.</p>
+
+    <a class="btn" href="wled-preset-editor.html">Open Editor</a>
+
+    <hr>
+
+    <h2>How to use</h2>
+    <ul>
+      <li>Open the editor and load your <code>presets.json</code> via the button or drag and drop</li>
+      <li>Click a preset row to open it in the editor</li>
+      <li>Tick the checkbox on the left of each row to add presets to the bulk selection</li>
+      <li>Shift-click a row to select a range of checkboxes</li>
+      <li>Export when done and upload the file back to your device via WLED's Backup/Restore page</li>
+    </ul>
+
+    <hr>
+
+    <h2>Links</h2>
+    <div class="links">
+      <a href="https://github.com/Aircoookie/WLED" target="_blank">WLED on GitHub</a>
+      <a href="https://kno.wled.ge" target="_blank">WLED knowledge base</a>
+      <a href="https://kno.wled.ge/features/effects/" target="_blank">Effects reference</a>
+      <a href="https://kno.wled.ge/features/presets/" target="_blank">Presets documentation</a>
+      <a href="https://kno.wled.ge/interfaces/json-api/" target="_blank">JSON API reference</a>
+      <a href="https://github.com/scottrbailey/WLED-Utils" target="_blank">WLED-Utils (effect previews and tooling)</a>
+    </div>
+  </div>
+</body>
+</html>
