@@ -6,23 +6,24 @@
 <title>WLED Preset Editor</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: Verdana, Geneva, sans-serif; font-size: 13px; background: #1a1a1a; color: #eee; min-height: 100vh; }
+html, body { height: 100%; overflow: hidden; }
+body { font-family: Verdana, Geneva, sans-serif; font-size: 13px; background: #1a1a1a; color: #eee; height: 100%; display: flex; flex-direction: column; }
 
 /* TOP BAR */
-#topbar { background: #2d2d2d; border-bottom: 2px solid #444; padding: 8px 12px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+#topbar { background: #2d2d2d; border-bottom: 2px solid #444; padding: 8px 12px; display: flex; align-items: center; gap: 10px; flex-wrap: nowrap; flex-shrink: 0; }
 #topbar h1 { font-size: 15px; font-weight: bold; color: #fff; }
 #topbar span.ver { color: #888; font-size: 11px; }
 
 /* LAYOUT */
-#layout { display: flex; height: calc(100vh - 44px); }
+#layout { display: flex; flex: 1; min-height: 0; }
 
 /* SIDEBAR */
-#sidebar { width: 215px; min-width: 160px; background: #222; border-right: 1px solid #444; display: flex; flex-direction: column; overflow: hidden; }
-#sidebar-head { padding: 6px 8px; background: #2d2d2d; border-bottom: 1px solid #444; display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+#sidebar { width: 240px; min-width: 200px; background: #222; border-right: 1px solid #444; display: flex; flex-direction: column; overflow: hidden; }
+#sidebar-head { padding: 5px 8px; background: #2d2d2d; border-bottom: 1px solid #444; display: flex; gap: 3px; flex-wrap: nowrap; align-items: center; overflow: hidden; flex-shrink: 0; }
 #sidebar-head .sel-info { font-size: 10px; color: #888; flex: 1; text-align: right; white-space: nowrap; }
 #preset-list { overflow-y: auto; flex: 1; }
 
-.preset-item { padding: 5px 8px; cursor: pointer; border-bottom: 1px solid #252525; display: flex; align-items: center; gap: 5px; user-select: none; }
+.preset-item { padding: 7px 8px; cursor: pointer; border-bottom: 1px solid #252525; display: flex; align-items: center; gap: 5px; user-select: none; }
 .preset-item:hover { background: #2a2a2a; }
 .preset-item.focused { background: #3a5f8a; }
 .preset-item.checked { background: #1e3050; }
@@ -37,7 +38,7 @@ body { font-family: Verdana, Geneva, sans-serif; font-size: 13px; background: #1
 .preset-item.checked .pchk { background: #2a5080; border-color: #4a80b0; }
 .preset-item.checked .pchk::after { content: '\2713'; }
 .preset-item .pid { font-size: 10px; color: #777; min-width: 22px; text-align: right; }
-.preset-item .pname { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+.preset-item .pname { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
 .preset-item .pon { width: 7px; height: 7px; border-radius: 50%; background: #444; flex-shrink: 0; }
 .preset-item .pon.on { background: #5a5; }
 
@@ -98,13 +99,15 @@ input[type="color"] { width: 32px; height: 24px; border: 1px solid #444; backgro
 .color-swatch { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #888; }
 
 /* BUTTONS */
-button { background: #3a3a3a; border: 1px solid #555; color: #ddd; padding: 3px 10px; font-size: 12px; font-family: inherit; cursor: pointer; border-radius: 2px; height: 24px; white-space: nowrap; }
+button { background: #3a3a3a; border: 1px solid #555; color: #ddd; padding: 4px 12px; font-size: 12px; font-family: inherit; cursor: pointer; border-radius: 2px; height: 26px; white-space: nowrap; display: inline-flex; align-items: center; gap: 5px; }
 button:hover { background: #4a4a4a; border-color: #777; }
 button.primary { background: #3a5f8a; border-color: #5a8fc0; color: #fff; }
 button.primary:hover { background: #4a6f9a; }
 button.danger { background: #6a2020; border-color: #993333; color: #fcc; }
 button.danger:hover { background: #7a2a2a; }
 button.small { padding: 2px 7px; font-size: 11px; height: 20px; }
+/* Topbar primary buttons: larger */
+#btn-load, #btn-export { height: 27px; font-size: 12px; padding: 3px 12px; }
 
 /* RAW */
 #raw-json { background: #111; border: 1px solid #333; border-radius: 3px; padding: 8px; font-family: monospace; font-size: 11px; color: #8bc34a; white-space: pre; overflow-x: auto; max-height: 300px; overflow-y: auto; }
@@ -183,10 +186,11 @@ hr.sep { border: none; border-top: 1px solid #333; margin: 8px 0; }
   #topbar { padding: 6px 10px; gap: 6px; }
   #topbar h1 { font-size: 13px; }
   #topbar span.ver { display: none; }
-  #topbar button { font-size: 11px; padding: 2px 8px; height: 26px; }
-  /* shorten button labels on small screens */
-  #topbar #btn-load-text::before { content: 'Load'; }
-  #topbar #btn-export-text::before { content: 'Export'; }
+  #btn-load, #btn-export { height: 26px; font-size: 12px; padding: 3px 10px; }
+  #topbar { flex-wrap: wrap; }
+  #topbar h1 { width: 100%; }
+  #topbar .topbar-spacer { display: none; }
+  #topbar #btn-load, #topbar #btn-export { flex: 1; justify-content: center; }
 
   /* Layout: stack vertically */
   #layout { flex-direction: column; height: auto; min-height: calc(100vh - 38px); }
@@ -298,7 +302,7 @@ hr.sep { border: none; border-top: 1px solid #333; margin: 8px 0; }
   <div id="modal">
     <div id="modal-head">
       <span id="modal-title">Confirm</span>
-      <button id="modal-x" onclick="closeModal()">&#x2715;</button>
+      <button id="modal-x" onclick="closeModal()"><svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" style="vertical-align:-1px"><path d="M2 2l10 10M12 2L2 12"/></svg></button>
     </div>
     <div id="modal-body">
       <div id="modal-desc"></div>
@@ -306,7 +310,7 @@ hr.sep { border: none; border-top: 1px solid #333; margin: 8px 0; }
     </div>
     <div id="modal-foot">
       <button onclick="closeModal()">Cancel</button>
-      <button class="primary" id="modal-ok">Confirm</button>
+      
     </div>
   </div>
 </div>
@@ -315,9 +319,9 @@ hr.sep { border: none; border-top: 1px solid #333; margin: 8px 0; }
 <div id="topbar">
   <h1>&#x26A1; WLED Preset Editor</h1>
   <span class="ver">presets.json</span>
-  <div style="flex:1"></div>
-  <button onclick="triggerLoad()">&#x1F4C2; Load JSON</button>
-  <button class="primary" onclick="confirmExport()">&#x1F4BE; Export JSON</button>
+  <div class="topbar-spacer" style="flex:1"></div>
+  <button id="btn-load" onclick="triggerLoad()"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px"><path d="M7 1v7M4 5l3 3 3-3"/><path d="M1 10v1.5A1.5 1.5 0 002.5 13h9A1.5 1.5 0 0013 11.5V10"/></svg> Load JSON</button>
+  <button id="btn-export" class="primary" onclick="confirmExport()"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px"><path d="M7 9V2M4 5l3-3 3 3"/><path d="M1 10v1.5A1.5 1.5 0 002.5 13h9A1.5 1.5 0 0013 11.5V10"/></svg> Export JSON</button>
   <input type="file" id="file-input" accept=".json" style="display:none" onchange="loadFile(event)">
 </div>
 
@@ -329,10 +333,10 @@ hr.sep { border: none; border-top: 1px solid #333; margin: 8px 0; }
   <!-- SIDEBAR -->
   <div id="sidebar">
     <div id="sidebar-head">
-      <button class="small primary" onclick="addPreset()">+ New</button>
-      <button class="small danger" onclick="confirmDelete()">&#x2715; Del</button>
-      <button class="small" onclick="selectAll()">[all]</button>
-      <button class="small" onclick="deselectAll()">[none]</button>
+      <button class="small primary" onclick="addPreset()"><svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px"><path d="M7 2v10M2 7h10"/></svg> New</button>
+      <button class="small danger" onclick="confirmDelete()"><svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px"><polyline points="2,4 12,4"/><path d="M5 4V2.5A.5.5 0 015.5 2h3a.5.5 0 01.5.5V4"/><path d="M3 4l.8 8h6.4L11 4"/></svg> Del</button>
+      <button class="small" onclick="selectAll()" title="Select all"><svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px"><rect x="1" y="1" width="12" height="12" rx="1"/><polyline points="3,7 6,10 11,4"/></svg> All</button>
+      <button class="small" onclick="deselectAll()" title="Deselect all"><svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px"><rect x="1" y="1" width="12" height="12" rx="1"/></svg> None</button>
       <span class="sel-info" id="sel-info">0 sel</span>
     </div>
     <div id="preset-list"></div>
@@ -520,7 +524,7 @@ hr.sep { border: none; border-top: 1px solid #333; margin: 8px 0; }
         </div>
 
         <div id="bulk-actions">
-          <button class="primary" onclick="confirmBulkApply()">&#x2714; Apply to checked presets</button>
+          <button class="primary" onclick="confirmBulkApply()"><svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px"><polyline points="2,8 5,11 12,3"/></svg> Apply to checked presets</button>
           <button onclick="deselectAll()">Clear selection</button>
         </div>
       </div>
@@ -533,8 +537,8 @@ hr.sep { border: none; border-top: 1px solid #333; margin: 8px 0; }
         <h2 id="preset-heading">Preset</h2>
       </div>
       <div id="actions">
-        <button class="primary" onclick="confirmSave()">&#x2714; Save changes</button>
-        <button class="danger small" onclick="confirmDelete()">&#x2715; Delete</button>
+        <span id="dirty-badge" style="display:none;color:#e8a840;font-size:11px;margin-right:4px" title="Unsaved changes">&#9679;</span><button class="primary" onclick="confirmSave()"><svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px"><polyline points="2,8 5,11 12,3"/></svg> Save changes</button>
+        <button class="danger small" onclick="confirmDelete()"><svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px"><polyline points="2,4 12,4"/><path d="M5 4V2.5A.5.5 0 015.5 2h3a.5.5 0 01.5.5V4"/><path d="M3 4l.8 8h6.4L11 4"/></svg> Delete</button>
       </div>
       <div class="tabs">
         <div class="tab active" onclick="switchTab('general',this)">General</div>
@@ -571,9 +575,9 @@ hr.sep { border: none; border-top: 1px solid #333; margin: 8px 0; }
         </div>
       </div>
       <div class="tab-pane" id="tab-raw">
-        <button id="raw-back-btn" onclick="switchTab('general', document.querySelector('.tab'))" style="margin-bottom:6px">&#8592; Back</button>
-        <button onclick="collectEdits();renderRaw()" style="margin-bottom:6px">&#x21BB; Refresh</button>
-        <button onclick="copyRaw()" style="margin-bottom:6px">&#x1F4CB; Copy</button>
+        <button id="raw-back-btn" onclick="switchTab('general', document.querySelector('.tab'))" style="margin-bottom:6px"><svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px"><path d="M9 2L4 7l5 5"/></svg> Back</button>
+        <button onclick="collectEdits();renderRaw()" style="margin-bottom:6px"><svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px"><path d="M1.5 7a5.5 5.5 0 105.5-5.5 5.5 5.5 0 00-4 1.7"/><polyline points="2,1 2,4 5,4"/></svg> Refresh</button>
+        <button onclick="copyRaw()" style="margin-bottom:6px"><svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:-2px"><rect x="1" y="4" width="9" height="10" rx="1"/><path d="M4 4V2.5A1.5 1.5 0 015.5 1H12a1.5 1.5 0 011.5 1.5v7A1.5 1.5 0 0112 11H10"/></svg> Copy</button>
         <div id="raw-json"></div>
       </div>
     </div>
@@ -590,6 +594,8 @@ let data = {};
 let focusedId = null;    // the preset open in the single editor (row click)
 let checkedIds = new Set(); // presets ticked via checkbox (bulk)
 let modalCb = null;
+let _savedSnap = null;   // JSON snapshot of preset at last renderEditor() or save
+let _dirty = false;      // true when form has unsaved changes
 
 // ─── INIT SELECTS ─────────────────────────────────────────────────────────────
 (function() {
@@ -691,6 +697,10 @@ function rangeCheck(fromId, toId) {
 }
 
 function focusPreset(id) {
+  switchPreset(id);
+}
+
+function doFocusPreset(id) {
   if (focusedId !== null && focusedId !== id) collectEdits();
   focusedId = id;
   buildSidebar();
@@ -733,6 +743,9 @@ function renderEditor() {
   document.getElementById('f-mainseg').value = p.mainseg ?? 0;
   renderSegments(p.seg || []);
   renderRaw();
+  _savedSnap = JSON.stringify(data[focusedId]);
+  _dirty = false;
+  markDirty(false);
 }
 
 function collectEdits() {
@@ -764,7 +777,7 @@ function confirmSave() {
   const p = data[focusedId];
   const diff = buildDiff(snap, p);
   showModal('Save preset #' + focusedId, 'Save changes to <strong>' + esc(p.n||'(unnamed)') + '</strong>?', diff, () => {
-    buildSidebar(); renderEditor(); showToast('\u2714 Preset salvato');
+    buildSidebar(); renderEditor(); showToast('\u2714 Preset salvato'); _dirty = false; markDirty(false);
   });
 }
 
@@ -784,7 +797,7 @@ function buildSegCard(seg, si) {
   card.innerHTML = `
     <div class="seg-card-head">
       <strong>Seg ${si}</strong><span style="color:#666">${seg.start??0}&rarr;${seg.stop??0}</span>
-      <span style="flex:1"></span><button class="small danger" onclick="removeSegment(${si})">&#x2715;</button>
+      <span style="flex:1"></span><button class="small danger" onclick="removeSegment(${si})"><svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" style="vertical-align:-1px"><path d="M2 2l10 10M12 2L2 12"/></svg></button>
     </div>
     <div class="seg-card-body">
       <label class="seg-label">LED start/stop</label>
@@ -1068,17 +1081,41 @@ function nextId() {
 }
 
 // ─── MODAL ────────────────────────────────────────────────────────────────────
-function showModal(title, desc, diff, cb) {
+function showModal(title, desc, diff, cb, extraBtns) {
   document.getElementById('modal-title').innerHTML = title;
-  document.getElementById('modal-desc').innerHTML = desc;
+  document.getElementById('modal-desc').innerHTML = desc || '';
   const d = document.getElementById('modal-diff');
   if (diff) { d.innerHTML=diff; d.style.display='block'; } else d.style.display='none';
   modalCb = cb;
-  document.getElementById('modal-ok').onclick = () => { const fn=modalCb; closeModal(); if(fn) fn(); };
+
+  const foot = document.getElementById('modal-foot');
+  // reset to default Cancel + Confirm
+  foot.innerHTML = '<button onclick="closeModal()">Cancel</button>';
+
+  if (extraBtns && extraBtns.length) {
+    // custom button set
+    extraBtns.forEach(btn => {
+      const el = document.createElement('button');
+      if (btn.cls) el.className = btn.cls;
+      el.textContent = btn.label;
+      el.onclick = () => { closeModal(); btn.cb(); };
+      foot.appendChild(el);
+    });
+    document.getElementById('modal-ok') && (document.getElementById('modal-ok').style.display='none');
+  } else {
+    const ok = document.createElement('button');
+    ok.className = 'primary'; ok.id = 'modal-ok-dyn'; ok.textContent = 'Confirm';
+    ok.onclick = () => { const fn=modalCb; closeModal(); if(fn) fn(); };
+    foot.appendChild(ok);
+  }
   document.getElementById('modal-overlay').classList.add('visible');
 }
 function closeModal() { document.getElementById('modal-overlay').classList.remove('visible'); modalCb=null; }
 document.getElementById('modal-overlay').addEventListener('click', e => { if(e.target===document.getElementById('modal-overlay')) closeModal(); });
+
+// Mark dirty whenever any input inside #editor changes
+document.getElementById('editor').addEventListener('input', () => { if (focusedId) { _dirty = true; markDirty(true); } });
+document.getElementById('editor').addEventListener('change', () => { if (focusedId) { _dirty = true; markDirty(true); } });
 
 // ─── RAW ──────────────────────────────────────────────────────────────────────
 function renderRaw() { if(!focusedId) return; document.getElementById('raw-json').textContent=JSON.stringify(data[focusedId],null,2); }
@@ -1123,6 +1160,59 @@ function hex2rgb(h) { return [parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16
 function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function ea(s) { return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 
+// ─── DIRTY TRACKING ──────────────────────────────────────────────────────────
+function markDirty(val) {
+  _dirty = val;
+  const badge = document.getElementById('dirty-badge');
+  if (badge) badge.style.display = val ? 'inline' : 'none';
+}
+
+function isDirty() {
+  if (!focusedId || !_savedSnap) return false;
+  // collect into a temp copy without touching data[]
+  const tmp = JSON.parse(_savedSnap);
+  // compare name field as quick check
+  const nameNow = document.getElementById('f-name').value || undefined;
+  if (JSON.stringify(nameNow) !== JSON.stringify(tmp.n)) return true;
+  // full compare: collect into data then compare, then restore
+  const snapBefore = JSON.stringify(data[focusedId]);
+  collectEdits();
+  const snapAfter = JSON.stringify(data[focusedId]);
+  // restore to before-collect state so we don't silently save
+  try { data[focusedId] = JSON.parse(snapBefore); } catch(e) {}
+  return snapBefore !== snapAfter;
+}
+
+// Switch to a different preset, asking to save if dirty
+function switchPreset(id) {
+  if (focusedId !== null && focusedId !== id && _dirty) {
+    const pname = esc(data[focusedId]?.n || '(unnamed)');
+    showModal(
+      'Unsaved changes',
+      `Preset <strong>#${focusedId} ${pname}</strong> has unsaved changes.`,
+      null,
+      null,
+      [
+        { label: 'Save & switch', cls: 'primary', cb: () => {
+            collectEdits(); _savedSnap = JSON.stringify(data[focusedId]);
+            _dirty = false; markDirty(false);
+            doFocusPreset(id);
+          }
+        },
+        { label: 'Discard & switch', cls: '', cb: () => {
+            // restore from snap
+            try { data[focusedId] = JSON.parse(_savedSnap); } catch(e) {}
+            _dirty = false; markDirty(false);
+            doFocusPreset(id);
+          }
+        }
+      ]
+    );
+    return;
+  }
+  doFocusPreset(id);
+}
+
 let _toastTimer = null;
 function showToast(msg) {
   const t = document.getElementById('toast');
@@ -1131,6 +1221,14 @@ function showToast(msg) {
   if (_toastTimer) clearTimeout(_toastTimer);
   _toastTimer = setTimeout(() => t.classList.remove('show'), 2000);
 }
+
+// ─── BEFOREUNLOAD GUARD ──────────────────────────────────────────────────────
+window.addEventListener('beforeunload', e => {
+  if (Object.keys(data).length > 1 && _dirty) {
+    e.preventDefault();
+    e.returnValue = '';
+  }
+});
 
 // ─── MOBILE SIDEBAR TOGGLE ───────────────────────────────────────────────────
 function toggleSidebar() {
