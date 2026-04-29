@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>WLED Preset Editor</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -20,6 +21,14 @@ h2 { font-size: 13px; font-weight: bold; color: #aaa; margin-bottom: 8px; margin
 .links a:hover { text-decoration: underline; }
 hr { border: none; border-top: 1px solid #333; margin: 24px 0; }
 code { font-family: monospace; color: #aaa; }
+@media (max-width: 480px) {
+  body { padding: 24px 14px; align-items: flex-start; }
+  h1 { font-size: 16px; }
+  .btn { display: block; text-align: center; padding: 12px; margin-bottom: 24px; }
+  .links a { font-size: 13px; padding: 4px 0; }
+  ul { padding-left: 14px; }
+  li { margin-bottom: 6px; }
+}
 </style>
 </head>
 <body>

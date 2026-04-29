@@ -43,7 +43,7 @@ body { font-family: Verdana, Geneva, sans-serif; font-size: 13px; background: #1
 
 /* MAIN */
 #main { flex: 1; overflow-y: auto; padding: 12px; background: #1a1a1a; }
-#no-preset { color: #666; text-align: center; margin-top: 60px; font-size: 14px; }
+#no-preset { color: #666; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; padding: 20px; }
 
 /* BULK BAR */
 #bulk-bar { display: none; background: #1e2a1e; border: 1px solid #3a5a3a; border-radius: 4px; margin-bottom: 10px; }
@@ -80,6 +80,16 @@ input[type="range"] { width: 120px; accent-color: #5a8fc0; vertical-align: middl
 input[type="checkbox"] { accent-color: #5a8fc0; width: 14px; height: 14px; cursor: pointer; }
 input[type="color"] { width: 32px; height: 24px; border: 1px solid #444; background: none; cursor: pointer; padding: 1px; border-radius: 2px; }
 
+
+/* Segment card grid: label col fixed, input col flexible */
+.seg-card-body { padding: 8px; display: grid; grid-template-columns: 130px 1fr; align-items: center; row-gap: 6px; column-gap: 8px; }
+.seg-card-body .full-row { grid-column: 1 / -1; }
+.seg-card-body label.seg-label { color: #aaa; font-size: 12px; align-self: center; }
+.seg-card-body .inputs { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+@media (max-width: 700px) {
+  .seg-card-body { grid-template-columns: 1fr; }
+  .seg-card-body label.seg-label { margin-bottom: 0; }
+}
 /* SEGMENTS */
 .seg-card { background: #1e1e1e; border: 1px solid #3a3a3a; border-radius: 3px; margin-bottom: 8px; }
 .seg-card-head { background: #2a2a2a; padding: 5px 8px; font-size: 11px; color: #aaa; border-bottom: 1px solid #3a3a3a; display: flex; align-items: center; gap: 8px; }
@@ -114,9 +124,10 @@ button.small { padding: 2px 7px; font-size: 11px; height: 20px; }
 .tab-pane.active { display: block; }
 
 /* DROP ZONE */
-#drop-zone { border: 2px dashed #444; border-radius: 4px; padding: 20px; text-align: center; color: #666; cursor: pointer; font-size: 13px; }
-#drop-zone.dragover { border-color: #5a8fc0; color: #5a8fc0; }
-#drop-zone:hover { border-color: #666; }
+#drop-zone { border: 2px dashed #444; border-radius: 4px; padding: 80px 40px; text-align: center; color: #666; cursor: pointer; font-size: 14px; width: 100%; max-width: 700px; transition: border-color 0.15s, background 0.15s, color 0.15s; }
+#drop-zone:hover { border-color: #666; color: #999; }
+#drop-zone.dragover { border-color: #5a8fc0; color: #5a8fc0; background: #1a2a3a; animation: pulse-border 0.8s ease-in-out infinite alternate; }
+@keyframes pulse-border { from { border-color: #5a8fc0; } to { border-color: #8ab8e0; } }
 
 /* MODAL */
 #modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.72); z-index: 1000; align-items: center; justify-content: center; }
@@ -141,6 +152,141 @@ hr.sep { border: none; border-top: 1px solid #333; margin: 8px 0; }
 /* TOAST */
 #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #2d4a2d; border: 1px solid #5a8a5a; color: #8bc88a; padding: 7px 18px; border-radius: 3px; font-size: 12px; opacity: 0; pointer-events: none; transition: opacity 0.2s; z-index: 2000; white-space: nowrap; }
 #toast.show { opacity: 1; }
+
+/* WIDE SCREEN: show general + segments side by side, hide tabs */
+@media (min-width: 1400px) {
+  #editor-columns { display: flex; gap: 12px; align-items: flex-start; }
+  #editor-col-general { flex: 0 0 320px; }
+  #editor-col-segments { flex: 1; min-width: 0; }
+  /* hide General and Segments tab buttons, keep Raw JSON always visible */
+  .tab:nth-child(1), .tab:nth-child(2) { display: none; }
+  /* show general + segments panes always */
+  #tab-general, #tab-segments { display: block !important; }
+  /* raw pane hidden by default, shown when active */
+  #tab-raw { display: none !important; }
+  #tab-raw.active { display: block !important; }
+  /* when raw is active, hide the two-column layout */
+  #editor.raw-active #editor-columns { display: none; }
+  /* back button: only useful on wide screen where General/Segments tabs are hidden */
+  #raw-back-btn { display: none; }
+  #editor.raw-active #raw-back-btn { display: inline-block; }
+
+}
+@media (max-width: 1399px) {
+  #editor-columns { display: block; }
+}
+
+/* ─── MOBILE ──────────────────────────────────────────────────────────────── */
+@media (max-width: 700px) {
+
+  /* Topbar */
+  #topbar { padding: 6px 10px; gap: 6px; }
+  #topbar h1 { font-size: 13px; }
+  #topbar span.ver { display: none; }
+  #topbar button { font-size: 11px; padding: 2px 8px; height: 26px; }
+  /* shorten button labels on small screens */
+  #topbar #btn-load-text::before { content: 'Load'; }
+  #topbar #btn-export-text::before { content: 'Export'; }
+
+  /* Layout: stack vertically */
+  #layout { flex-direction: column; height: auto; min-height: calc(100vh - 38px); }
+
+  /* Sidebar becomes a collapsible drawer */
+  #sidebar {
+    width: 100%;
+    min-width: unset;
+    border-right: none;
+    border-bottom: 1px solid #444;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.25s ease;
+  }
+  #sidebar.open {
+    max-height: 260px;
+  }
+  #preset-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    padding: 4px;
+    overflow-y: auto;
+    max-height: 200px;
+  }
+  .preset-item {
+    border-bottom: none;
+    border: 1px solid #333;
+    border-radius: 2px;
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+  .preset-item .pid { min-width: 16px; }
+
+  /* Sidebar toggle bar (only on mobile) */
+  #sidebar-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #2d2d2d;
+    border-bottom: 1px solid #444;
+    padding: 6px 10px;
+    cursor: pointer;
+    user-select: none;
+    font-size: 12px;
+    color: #aaa;
+  }
+  #sidebar-toggle-arrow { font-size: 10px; transition: transform 0.2s; }
+  #sidebar.open ~ * #sidebar-toggle-arrow,
+  body.sidebar-open #sidebar-toggle-arrow { transform: rotate(180deg); }
+
+  /* Main */
+  #main { padding: 8px; overflow-y: auto; }
+
+  /* Drop zone */
+  #drop-zone { padding: 32px 16px; }
+
+  /* Bulk bar */
+  #bulk-bar-body { padding: 8px; }
+  .brow .benbl { min-width: 130px; }
+
+  /* Sections / form */
+  .section-body { padding: 8px; }
+  .row { flex-direction: column; align-items: flex-start; gap: 4px; margin-bottom: 10px; }
+  .row label { min-width: unset; }
+  input[type="range"] { width: 100%; max-width: 260px; }
+  input[type="text"] { width: 100%; max-width: 260px; }
+  select { min-width: unset; width: 100%; max-width: 280px; }
+  input[type="number"] { height: 28px; font-size: 13px; }
+
+  /* Seg card */
+  .seg-card-body { padding: 8px; }
+
+  /* Tabs */
+  .tab { padding: 5px 10px; font-size: 11px; }
+
+  /* Actions */
+  #actions { gap: 6px; }
+  #preset-title-bar h2 { font-size: 13px; }
+
+  /* Modal */
+  #modal { width: 96vw; }
+  #modal-diff { max-height: 140px; }
+
+  /* Toast */
+  #toast { font-size: 11px; padding: 6px 14px; bottom: 16px; }
+
+  /* Editor wide-screen columns: force single column on mobile */
+  #editor-columns { display: block !important; }
+}
+
+/* Sidebar toggle: only visible on mobile */
+#sidebar-toggle { display: none; }
+@media (max-width: 700px) {
+  #sidebar-toggle { display: flex; }
+}
+
+/* Checkbox groups stay horizontal on all screen sizes */
+.row.row-inline { flex-direction: row !important; align-items: center; flex-wrap: wrap; }
+.row.row-inline label { min-width: unset; display: flex; align-items: center; gap: 4px; }
 </style>
 </head>
 <body>
@@ -175,6 +321,10 @@ hr.sep { border: none; border-top: 1px solid #333; margin: 8px 0; }
   <input type="file" id="file-input" accept=".json" style="display:none" onchange="loadFile(event)">
 </div>
 
+<div id="sidebar-toggle" onclick="toggleSidebar()">
+  <span id="sidebar-toggle-label">Presets <span id="sidebar-toggle-count"></span></span>
+  <span id="sidebar-toggle-arrow">&#9660;</span>
+</div>
 <div id="layout">
   <!-- SIDEBAR -->
   <div id="sidebar">
@@ -191,9 +341,13 @@ hr.sep { border: none; border-top: 1px solid #333; margin: 8px 0; }
   <!-- MAIN -->
   <div id="main">
     <div id="no-preset">
-      <div style="font-size:40px;margin-bottom:12px">&#x1F4A1;</div>
-      <div>Load a <strong>presets.json</strong> file or drag &amp; drop it here.</div>
-      <br>
+      <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAMAAABEpIrGAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAbUExURQAAAAB81gCU/zKq/////9bW1oCAgGhoaAAAAGPLX8AAAAAJdFJOU///////////AFNPeBIAAAAJcEhZcwAADsAAAA7AAWrWiQkAAACdSURBVDhPxc9bDoUgEANQebP/FUuHMjBGY/B+3EYR7RH0qC/ZBc6HwCljgHO+xZIVSI2sYgHaG7EBWh8jWoxTrCBFdDJ+BD4lbIHxAcz8APAVLTsrZE4eQD5qzt3cAFTYokC4YCN9Gybgu4yAQtBFLQXHuHABA7JMeOEC/E0W5uy9gv4vo5QHK2i7yq2C8UABM4HmL+CSTXCTF1DrCX6+Gp9zB5dsAAAAAElFTkSuQmCC" alt="WLED" style="width:64px;height:64px;image-rendering:pixelated;margin-bottom:20px;opacity:0.9">
+      <div style="margin-bottom:16px;color:#aaa;font-size:13px;">
+        Load a <strong style="color:#ccc">presets.json</strong> file or drag &amp; drop it here.<br>
+        <span style="font-size:11px;color:#666;margin-top:6px;display:block">
+          In the WLED web interface go to Config &gt; Security &amp; Updates &gt; Backup, then download <code style="color:#888">presets.json</code>.
+        </span>
+      </div>
       <div id="drop-zone" onclick="triggerLoad()">Drop presets.json here or click to browse</div>
     </div>
 
@@ -387,30 +541,37 @@ hr.sep { border: none; border-top: 1px solid #333; margin: 8px 0; }
         <div class="tab" onclick="switchTab('segments',this)">Segments</div>
         <div class="tab" onclick="switchTab('raw',this)">Raw JSON</div>
       </div>
-      <div class="tab-pane active" id="tab-general">
-        <div class="section">
-          <div class="section-head" onclick="toggleSection(this)"><span>Preset Info</span><span class="arrow">&#9660;</span></div>
-          <div class="section-body">
-            <div class="row"><label>Name (n)</label><input type="text" id="f-name" placeholder="Preset name"></div>
-            <div class="row"><label>Quick Label (ql)</label><input type="text" id="f-ql" placeholder="e.g. gi" maxlength="2" style="width:60px"><span class="hint">2-char shortcut</span></div>
-            <div class="row"><label>ID</label><input type="number" id="f-id" min="1" max="250"><span class="hint">1-250</span></div>
+      <div id="editor-columns">
+        <div id="editor-col-general">
+          <div class="tab-pane active" id="tab-general">
+            <div class="section">
+              <div class="section-head" onclick="toggleSection(this)"><span>Preset Info</span><span class="arrow">&#9660;</span></div>
+              <div class="section-body">
+                <div class="row"><label>Name (n)</label><input type="text" id="f-name" placeholder="Preset name"></div>
+                <div class="row"><label>Quick Label (ql)</label><input type="text" id="f-ql" placeholder="e.g. gi" maxlength="2" style="width:60px"><span class="hint">2-char shortcut</span></div>
+                <div class="row"><label>ID</label><input type="number" id="f-id" min="1" max="250"><span class="hint">1-250</span></div>
+              </div>
+            </div>
+            <div class="section">
+              <div class="section-head" onclick="toggleSection(this)"><span>Global State</span><span class="arrow">&#9660;</span></div>
+              <div class="section-body">
+                <div class="row"><label>On (on)</label><input type="checkbox" id="f-on"></div>
+                <div class="row"><label>Brightness (bri)</label><input type="range" id="f-bri" min="0" max="255" oninput="syncRange(this,'f-bri-n')"><span class="range-val" id="f-bri-n">255</span></div>
+                <div class="row"><label>Transition</label><input type="number" id="f-transition" min="0" max="65535" style="width:80px"><span class="hint">x100ms</span></div>
+                <div class="row"><label>Main segment</label><input type="number" id="f-mainseg" min="0" max="31" style="width:60px"></div>
+              </div>
+            </div>
           </div>
         </div>
-        <div class="section">
-          <div class="section-head" onclick="toggleSection(this)"><span>Global State</span><span class="arrow">&#9660;</span></div>
-          <div class="section-body">
-            <div class="row"><label>On (on)</label><input type="checkbox" id="f-on"></div>
-            <div class="row"><label>Brightness (bri)</label><input type="range" id="f-bri" min="0" max="255" oninput="syncRange(this,'f-bri-n')"><span class="range-val" id="f-bri-n">255</span></div>
-            <div class="row"><label>Transition</label><input type="number" id="f-transition" min="0" max="65535" style="width:80px"><span class="hint">x100ms</span></div>
-            <div class="row"><label>Main segment</label><input type="number" id="f-mainseg" min="0" max="31" style="width:60px"></div>
+        <div id="editor-col-segments">
+          <div class="tab-pane" id="tab-segments">
+            <div id="segments-container"></div>
+            <button onclick="addSegment()" style="margin-top:4px">+ Add segment</button>
           </div>
         </div>
-      </div>
-      <div class="tab-pane" id="tab-segments">
-        <div id="segments-container"></div>
-        <button onclick="addSegment()" style="margin-top:4px">+ Add segment</button>
       </div>
       <div class="tab-pane" id="tab-raw">
+        <button id="raw-back-btn" onclick="switchTab('general', document.querySelector('.tab'))" style="margin-bottom:6px">&#8592; Back</button>
         <button onclick="collectEdits();renderRaw()" style="margin-bottom:6px">&#x21BB; Refresh</button>
         <button onclick="copyRaw()" style="margin-bottom:6px">&#x1F4CB; Copy</button>
         <div id="raw-json"></div>
@@ -512,6 +673,7 @@ function buildSidebar() {
   });
   updateSelInfo();
   refreshBulkBar();
+  updateToggleCount();
 }
 
 function toggleChecked(id) {
@@ -532,6 +694,9 @@ function focusPreset(id) {
   if (focusedId !== null && focusedId !== id) collectEdits();
   focusedId = id;
   buildSidebar();
+  // close sidebar on mobile after selecting
+  const sb = document.getElementById('sidebar');
+  if (sb.classList.contains('open')) { sb.classList.remove('open'); document.getElementById('sidebar-toggle-arrow').style.transform = ''; }
   document.getElementById('no-preset').style.display = 'none';
   document.getElementById('editor').style.display = 'block';
   renderEditor();
@@ -622,70 +787,108 @@ function buildSegCard(seg, si) {
       <span style="flex:1"></span><button class="small danger" onclick="removeSegment(${si})">&#x2715;</button>
     </div>
     <div class="seg-card-body">
-      <div class="row"><label>LED start/stop</label>
+      <label class="seg-label">LED start/stop</label>
+      <div class="inputs">
         <input type="number" class="sf" data-si="${si}" data-k="start" value="${seg.start??0}" min="0" style="width:60px">
         <span style="color:#666">&ndash;</span>
         <input type="number" class="sf" data-si="${si}" data-k="stop" value="${seg.stop??0}" min="0" style="width:60px">
       </div>
-      <div class="row"><label>Name</label><input type="text" class="sf" data-si="${si}" data-k="n" value="${ea(seg.n||'')}" style="width:140px" placeholder="optional"></div>
-      <div class="row">
-        <label>On</label><input type="checkbox" class="sf" data-si="${si}" data-k="on" ${seg.on!==false?'checked':''}>
-        <label>Rev</label><input type="checkbox" class="sf" data-si="${si}" data-k="rev" ${seg.rev?'checked':''}>
-        <label>Mirror</label><input type="checkbox" class="sf" data-si="${si}" data-k="mi" ${seg.mi?'checked':''}>
-        <label>Freeze</label><input type="checkbox" class="sf" data-si="${si}" data-k="frz" ${seg.frz?'checked':''}>
+
+      <label class="seg-label">Name</label>
+      <div class="inputs"><input type="text" class="sf" data-si="${si}" data-k="n" value="${ea(seg.n||'')}" style="width:160px" placeholder="optional"></div>
+
+      <label class="seg-label">Flags</label>
+      <div class="inputs">
+        <label style="color:#aaa;font-size:12px;display:flex;align-items:center;gap:3px">On <input type="checkbox" class="sf" data-si="${si}" data-k="on" ${seg.on!==false?'checked':''}></label>
+        <label style="color:#aaa;font-size:12px;display:flex;align-items:center;gap:3px">Rev <input type="checkbox" class="sf" data-si="${si}" data-k="rev" ${seg.rev?'checked':''}></label>
+        <label style="color:#aaa;font-size:12px;display:flex;align-items:center;gap:3px">Mirror <input type="checkbox" class="sf" data-si="${si}" data-k="mi" ${seg.mi?'checked':''}></label>
+        <label style="color:#aaa;font-size:12px;display:flex;align-items:center;gap:3px">Freeze <input type="checkbox" class="sf" data-si="${si}" data-k="frz" ${seg.frz?'checked':''}></label>
       </div>
-      <div class="row"><label>Brightness</label>
+
+      <label class="seg-label">Brightness</label>
+      <div class="inputs">
         <input type="range" id="sbri-${si}" min="0" max="255" value="${seg.bri??255}" oninput="syncRange(this,'sbri-n-${si}')">
         <span class="range-val" id="sbri-n-${si}">${seg.bri??255}</span>
       </div>
-      <div class="row"><label>Grp / Spc / Offset</label>
+
+      <label class="seg-label">Grp / Spc / Offset</label>
+      <div class="inputs">
         <input type="number" class="sf" data-si="${si}" data-k="grp" value="${seg.grp??1}" min="1" max="255" style="width:52px">
         <input type="number" class="sf" data-si="${si}" data-k="spc" value="${seg.spc??0}" min="0" max="255" style="width:52px">
         <input type="number" class="sf" data-si="${si}" data-k="of" value="${seg.of??0}" style="width:52px">
       </div>
-      <hr class="sep">
-      <div class="row"><label>Effect (fx)</label>
+
+      <div class="full-row"><hr class="sep"></div>
+
+      <label class="seg-label">Effect (fx)</label>
+      <div class="inputs">
         <select class="sf" data-si="${si}" data-k="fx" style="min-width:190px">
           ${Object.entries(EFFECTS).map(([k,v])=>`<option value="${k}" ${+k===(seg.fx??0)?'selected':''}>${k}: ${v}</option>`).join('')}
         </select>
       </div>
-      <div class="row"><label>Speed / Intensity</label>
+
+      <label class="seg-label">Speed (sx)</label>
+      <div class="inputs">
         <input type="range" id="ssx-${si}" min="0" max="255" value="${seg.sx??128}" oninput="syncRange(this,'ssx-n-${si}')">
         <span class="range-val" id="ssx-n-${si}">${seg.sx??128}</span>
+      </div>
+
+      <label class="seg-label">Intensity (ix)</label>
+      <div class="inputs">
         <input type="range" id="six-${si}" min="0" max="255" value="${seg.ix??128}" oninput="syncRange(this,'six-n-${si}')">
         <span class="range-val" id="six-n-${si}">${seg.ix??128}</span>
       </div>
-      <div class="row"><label>Custom 1/2/3</label>
+
+      <label class="seg-label">Custom 1 (c1)</label>
+      <div class="inputs">
         <input type="range" id="sc1-${si}" min="0" max="255" value="${seg.c1??128}" oninput="syncRange(this,'sc1-n-${si}')">
         <span class="range-val" id="sc1-n-${si}">${seg.c1??128}</span>
+      </div>
+
+      <label class="seg-label">Custom 2 (c2)</label>
+      <div class="inputs">
         <input type="range" id="sc2-${si}" min="0" max="255" value="${seg.c2??128}" oninput="syncRange(this,'sc2-n-${si}')">
         <span class="range-val" id="sc2-n-${si}">${seg.c2??128}</span>
+      </div>
+
+      <label class="seg-label">Custom 3 (c3)</label>
+      <div class="inputs">
         <input type="range" id="sc3-${si}" min="0" max="255" value="${seg.c3??16}" oninput="syncRange(this,'sc3-n-${si}')">
         <span class="range-val" id="sc3-n-${si}">${seg.c3??16}</span>
       </div>
-      <div class="row"><label>Palette (pal)</label>
+
+      <label class="seg-label">Palette (pal)</label>
+      <div class="inputs">
         <select class="sf" data-si="${si}" data-k="pal" style="min-width:190px">
           ${Object.entries(PALETTES).map(([k,v])=>`<option value="${k}" ${+k===(seg.pal??0)?'selected':''}>${k}: ${v}</option>`).join('')}
         </select>
       </div>
-      <div class="row"><label>CCT</label>
+
+      <label class="seg-label">CCT</label>
+      <div class="inputs">
         <input type="range" id="scct-${si}" min="0" max="255" value="${seg.cct??127}" oninput="syncRange(this,'scct-n-${si}')">
         <span class="range-val" id="scct-n-${si}">${seg.cct??127}</span>
-        <span class="hint">color temp</span>
+        <span class="hint" style="font-size:10px;color:#666">color temp</span>
       </div>
-      <hr class="sep">
-      <div class="colors-row">
-        <label style="min-width:120px;color:#aaa;font-size:12px">Colors</label>
-        <div class="color-swatch"><span>Primary</span><input type="color" id="sc0-${si}" value="${c0}"></div>
-        <div class="color-swatch"><span>Secondary</span><input type="color" id="sc1c-${si}" value="${c1}"></div>
-        <div class="color-swatch"><span>Tertiary</span><input type="color" id="sc2c-${si}" value="${c2}"></div>
+
+      <div class="full-row"><hr class="sep"></div>
+
+      <label class="seg-label">Colors</label>
+      <div class="inputs">
+        <div class="color-swatch"><span style="font-size:11px;color:#888">Primary</span><input type="color" id="sc0-${si}" value="${c0}"></div>
+        <div class="color-swatch"><span style="font-size:11px;color:#888">Secondary</span><input type="color" id="sc1c-${si}" value="${c1}"></div>
+        <div class="color-swatch"><span style="font-size:11px;color:#888">Tertiary</span><input type="color" id="sc2c-${si}" value="${c2}"></div>
       </div>
-      <div class="row"><label>o1/o2/o3</label>
-        <label>o1 <input type="checkbox" class="sf" data-si="${si}" data-k="o1" ${seg.o1?'checked':''}></label>
-        <label>o2 <input type="checkbox" class="sf" data-si="${si}" data-k="o2" ${seg.o2?'checked':''}></label>
-        <label>o3 <input type="checkbox" class="sf" data-si="${si}" data-k="o3" ${seg.o3?'checked':''}></label>
+
+      <label class="seg-label">o1 / o2 / o3</label>
+      <div class="inputs">
+        <label style="color:#aaa;font-size:12px;display:flex;align-items:center;gap:3px">o1 <input type="checkbox" class="sf" data-si="${si}" data-k="o1" ${seg.o1?'checked':''}></label>
+        <label style="color:#aaa;font-size:12px;display:flex;align-items:center;gap:3px">o2 <input type="checkbox" class="sf" data-si="${si}" data-k="o2" ${seg.o2?'checked':''}></label>
+        <label style="color:#aaa;font-size:12px;display:flex;align-items:center;gap:3px">o3 <input type="checkbox" class="sf" data-si="${si}" data-k="o3" ${seg.o3?'checked':''}></label>
       </div>
-      <div class="row"><label>Sound(si) / Map(m12)</label>
+
+      <label class="seg-label">Sound (si) / Map (m12)</label>
+      <div class="inputs">
         <input type="number" class="sf" data-si="${si}" data-k="si" value="${seg.si??0}" min="0" max="3" style="width:50px">
         <input type="number" class="sf" data-si="${si}" data-k="m12" value="${seg.m12??0}" min="0" max="5" style="width:50px">
       </div>
@@ -906,7 +1109,9 @@ function switchTab(name, el) {
   document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
   el.classList.add('active');
   document.getElementById('tab-'+name).classList.add('active');
-  if (name==='raw') { collectEdits(); renderRaw(); }
+  const editor = document.getElementById('editor');
+  if (name==='raw') { editor.classList.add('raw-active'); collectEdits(); renderRaw(); }
+  else { editor.classList.remove('raw-active'); }
 }
 function toggleSection(head) { const b=head.nextElementSibling,a=head.querySelector('.arrow'),c=b.classList.toggle('collapsed'); a.innerHTML=c?'&#9654;':'&#9660;'; }
 
@@ -925,6 +1130,20 @@ function showToast(msg) {
   t.classList.add('show');
   if (_toastTimer) clearTimeout(_toastTimer);
   _toastTimer = setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// ─── MOBILE SIDEBAR TOGGLE ───────────────────────────────────────────────────
+function toggleSidebar() {
+  const sb = document.getElementById('sidebar');
+  const arrow = document.getElementById('sidebar-toggle-arrow');
+  const open = sb.classList.toggle('open');
+  arrow.style.transform = open ? 'rotate(180deg)' : '';
+}
+function updateToggleCount() {
+  const el = document.getElementById('sidebar-toggle-count');
+  if (!el) return;
+  const n = visibleKeys().length;
+  el.textContent = n > 0 ? '(' + n + ')' : '';
 }
 </script>
 </body>
