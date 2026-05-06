@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WLED Remote</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body { font-family: Verdana, Geneva, sans-serif; font-size: 13px; background: #1a1a1a; color: #eee; }
+
+/* ── CONNECTION SCREEN ──────────────────────────────────────────── */
+#connect-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 40px 16px; }
+.card { max-width: 480px; width: 100%; }
+.card h1 { font-size: 18px; font-weight: bold; color: #fff; margin-bottom: 6px; }
+.card .sub { color: #888; font-size: 12px; margin-bottom: 24px; }
+.url-row { display: flex; gap: 8px; margin-bottom: 12px; }
+.url-row input { flex: 1; background: #1a1a1a; border: 1px solid #444; color: #eee; padding: 6px 10px; font-size: 13px; font-family: inherit; border-radius: 2px; height: 34px; }
+.url-row input:focus { outline: none; border-color: #5a8fc0; }
+.url-row button { height: 34px; padding: 0 18px; background: #3a5f8a; border: 1px solid #5a8fc0; color: #fff; font-size: 13px; font-family: inherit; border-radius: 2px; cursor: pointer; white-space: nowrap; }
+.url-row button:hover { background: #4a6f9a; }
+.url-row button:disabled { opacity: 0.5; cursor: default; }
+#connect-err { color: #f88; font-size: 12px; margin-bottom: 10px; display: none; }
+.recent-title { font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+.recent-list { display: flex; flex-direction: column; gap: 4px; }
+.recent-item { background: #252525; border: 1px solid #333; border-radius: 2px; padding: 7px 10px; font-size: 12px; color: #aaa; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.recent-item:hover { background: #2d2d2d; color: #eee; border-color: #444; }
+.recent-item .ri-url { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recent-item .ri-go { font-size: 10px; color: #5a8fc0; flex-shrink: 0; }
+
+/* ── APP ────────────────────────────────────────────────────────── */
+#app { display: none; height: 100vh; flex-direction: column; }
+#app.visible { display: flex; }
+
+/* TOPBAR */
+#topbar { background: #2d2d2d; border-bottom: 2px solid #444; padding: 8px 12px; display: flex; align-items: center; gap: 10px; flex-shrink: 0; flex-wrap: nowrap; }
+#topbar h1 { font-size: 15px; font-weight: bold; color: #fff; white-space: nowrap; }
+#device-meta { display: flex; flex-direction: column; gap: 1px; overflow: hidden; }
+#device-name { font-size: 12px; color: #aaa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+#device-url-label { font-size: 10px; color: #555; white-space: nowrap; }
+.topbar-spacer { flex: 1; }
+#btn-power { height: 27px; padding: 3px 12px; font-size: 12px; background: #3a3a3a; border: 1px solid #555; color: #ddd; font-family: inherit; cursor: pointer; border-radius: 2px; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+#btn-power:hover { background: #4a4a4a; }
+#btn-power.on { background: #1e4a1e; border-color: #4a9a4a; color: #8bc88a; }
+#btn-power.on:hover { background: #285028; }
+#btn-disconnect { height: 27px; padding: 3px 10px; font-size: 12px; background: #3a3a3a; border: 1px solid #555; color: #888; font-family: inherit; cursor: pointer; border-radius: 2px; display: inline-flex; align-items: center; }
+#btn-disconnect:hover { background: #4a4a4a; color: #ccc; }
+
+/* LAYOUT */
+#layout { display: flex; flex: 1; min-height: 0; }
+
+/* ── CONTROLS SIDEBAR ───────────────────────────────────────────── */
+#controls { width: 260px; min-width: 220px; background: #222; border-right: 1px solid #444; display: flex; flex-direction: column; overflow-y: auto; flex-shrink: 0; }
+.ctrl-section { border-bottom: 1px solid #333; }
+.ctrl-head { background: #2d2d2d; padding: 7px 10px; font-size: 11px; font-weight: bold; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; }
+.ctrl-head .arrow { font-size: 10px; color: #666; }
+.ctrl-body { padding: 10px; }
+.ctrl-body.collapsed { display: none; }
+.ctrl-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.ctrl-row:last-child { margin-bottom: 0; }
+.ctrl-label { font-size: 11px; color: #888; min-width: 64px; flex-shrink: 0; }
+.ctrl-row input[type="range"] { flex: 1; accent-color: #5a8fc0; min-width: 60px; }
+.ctrl-row input[type="color"] { width: 32px; height: 24px; border: 1px solid #444; background: none; cursor: pointer; padding: 1px; border-radius: 2px; flex-shrink: 0; }
+.ctrl-row select { flex: 1; background: #1a1a1a; border: 1px solid #444; color: #eee; padding: 2px 6px; font-size: 11px; font-family: inherit; border-radius: 2px; height: 24px; min-width: 0; }
+.ctrl-row select option { background: #222; }
+/* Clickable range value — click to type */
+.range-val { min-width: 30px; text-align: right; font-size: 11px; color: #666; flex-shrink: 0; cursor: pointer; border-radius: 2px; padding: 0 2px; }
+.range-val:hover { color: #aaa; text-decoration: underline dotted #555; }
+.range-val-input { width: 44px; background: #111; border: 1px solid #5a8fc0; color: #eee; font-size: 11px; padding: 1px 3px; border-radius: 2px; font-family: inherit; text-align: center; }
+#ctrl-power-btn { width: 100%; height: 32px; background: #3a3a3a; border: 1px solid #555; color: #ddd; font-family: inherit; font-size: 12px; cursor: pointer; border-radius: 2px; display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 10px; }
+#ctrl-power-btn:hover { background: #4a4a4a; }
+#ctrl-power-btn.on { background: #1e4a1e; border-color: #4a9a4a; color: #8bc88a; }
+
+/* ── MAIN PANEL ─────────────────────────────────────────────────── */
+#main { flex: 1; display: flex; flex-direction: column; min-width: 0; background: #1a1a1a; }
+.tabs { display: flex; gap: 2px; padding: 8px 10px 0; border-bottom: 1px solid #444; flex-shrink: 0; }
+.tab { padding: 5px 14px; cursor: pointer; font-size: 12px; color: #888; border: 1px solid transparent; border-bottom: none; border-radius: 3px 3px 0 0; margin-bottom: -1px; }
+.tab:hover { color: #ccc; }
+.tab.active { background: #252525; border-color: #444; border-bottom-color: #252525; color: #fff; }
+.tab-pane { display: none; flex: 1; overflow-y: auto; padding: 10px; flex-direction: column; }
+.tab-pane.active { display: flex; }
+
+/* EFFECT PREVIEW BAR */
+#effect-preview { background: #252525; border: 1px solid #3a3a3a; border-radius: 3px; padding: 8px 10px; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; min-height: 54px; flex-shrink: 0; }
+#ep-img { width: 96px; height: 36px; object-fit: cover; border-radius: 2px; border: 1px solid #333; background: #111; flex-shrink: 0; display: none; }
+#ep-name { font-size: 12px; color: #ccc; }
+#ep-hint { font-size: 10px; color: #555; margin-top: 2px; }
+
+/* GRIDS */
+.effect-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 4px; }
+.preset-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 5px; }
+
+/* Grid buttons — effect GIF as background with readable overlay */
+.grid-btn {
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  text-align: center;
+  padding: 5px 4px;
+  overflow: hidden;
+  line-height: 1.3;
+  cursor: pointer;
+  border: 1px solid #3a3a3a;
+  background-color: #252525;
+  background-size: cover;
+  background-position: center;
+  color: #ccc;
+  border-radius: 3px;
+  position: relative;
+  transition: border-color 0.1s, color 0.1s;
+  font-family: inherit;
+  word-break: break-word;
+  hyphens: auto;
+}
+/* Dim overlay over GIF — allows text to be legible */
+.grid-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(14,14,14,0.68);
+  border-radius: inherit;
+  z-index: 0;
+  transition: background 0.15s;
+  pointer-events: none;
+}
+.grid-btn:hover { border-color: #555; color: #fff; }
+.grid-btn:hover::after { background: rgba(14,14,14,0.45); }
+.grid-btn.active { border-color: #5a8fc0; color: #fff; }
+.grid-btn.active::after { background: rgba(15,40,90,0.58); }
+/* Text spans above overlay */
+.btn-id { font-size: 9px; color: #666; margin-bottom: 2px; display: block; position: relative; z-index: 1; }
+.btn-name { display: block; position: relative; z-index: 1; }
+.grid-btn.active .btn-id { color: #8ab8e0; }
+.preset-grid .grid-btn { aspect-ratio: unset; min-height: 68px; }
+.empty-msg { color: #555; font-size: 12px; padding: 30px; text-align: center; }
+
+/* SCROLLBAR */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #1a1a1a; }
+::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+
+/* TOAST */
+#toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #2d4a2d; border: 1px solid #5a8a5a; color: #8bc88a; padding: 7px 18px; border-radius: 3px; font-size: 12px; opacity: 0; pointer-events: none; transition: opacity 0.2s; z-index: 2000; white-space: nowrap; }
+#toast.show { opacity: 1; }
+
+/* ── MOBILE ─────────────────────────────────────────────────────── */
+@media (max-width: 700px) {
+  #topbar { flex-wrap: wrap; padding: 6px 10px; gap: 6px; }
+  #topbar h1 { font-size: 13px; }
+  #device-name { max-width: 130px; }
+  #device-url-label { display: none; }
+  #layout { flex-direction: column; }
+  #controls { width: 100%; min-width: unset; border-right: none; border-bottom: 1px solid #444; overflow-y: unset; flex-shrink: 0; }
+  .effect-grid { grid-template-columns: repeat(auto-fill, minmax(66px, 1fr)); }
+  .preset-grid { grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); }
+  .tab-pane { padding: 8px; }
+  #connect-screen { align-items: flex-start; padding: 24px 14px; }
+}
+</style>
+</head>
+<body>
+
+<!-- CONNECTION SCREEN -->
+<div id="connect-screen">
+  <div class="card">
+    <h1>⚡ WLED Remote</h1>
+    <div class="sub">Control your WLED device via JSON API</div>
+    <div class="url-row">
+      <input type="text" id="url-input" placeholder="http://192.168.1.x" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <button id="btn-connect" onclick="connect()">Connect</button>
+    </div>
+    <div id="connect-err"></div>
+    <div id="recent-section" style="display:none">
+      <div class="recent-title">Recent</div>
+      <div class="recent-list" id="recent-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app">
+  <div id="topbar">
+    <h1>⚡ WLED Remote</h1>
+    <div id="device-meta">
+      <div id="device-name">—</div>
+      <div id="device-url-label"></div>
+    </div>
+    <div class="topbar-spacer"></div>
+    <button id="btn-power" onclick="togglePower()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2v10"/><path d="M6.8 5.8A9 9 0 1 0 17.2 5.8"/></svg>
+      <span id="power-label">Off</span>
+    </button>
+    <button id="btn-disconnect" onclick="disconnect()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+    </button>
+  </div>
+
+  <div id="layout">
+    <!-- Controls -->
+    <div id="controls">
+
+      <div class="ctrl-section">
+        <div class="ctrl-head" onclick="toggleCtrl(this)">Power &amp; Brightness <span class="arrow">▾</span></div>
+        <div class="ctrl-body">
+          <button id="ctrl-power-btn" onclick="togglePower()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2v10"/><path d="M6.8 5.8A9 9 0 1 0 17.2 5.8"/></svg>
+            <span id="ctrl-power-label">Off</span>
+          </button>
+          <div class="ctrl-row">
+            <span class="ctrl-label">Brightness</span>
+            <input type="range" id="ctrl-bri" min="1" max="255" value="128" oninput="onBri(this)">
+            <span class="range-val" id="ctrl-bri-val"
+              onclick="editVal(this,'ctrl-bri',1,255,'bri')">128</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="ctrl-section">
+        <div class="ctrl-head" onclick="toggleCtrl(this)">Colors <span class="arrow">▾</span></div>
+        <div class="ctrl-body">
+          <div class="ctrl-row">
+            <span class="ctrl-label">Primary</span>
+            <input type="color" id="ctrl-col0" value="#ff0000" oninput="onColor(0,this.value)">
+          </div>
+          <div class="ctrl-row">
+            <span class="ctrl-label">Secondary</span>
+            <input type="color" id="ctrl-col1" value="#000000" oninput="onColor(1,this.value)">
+          </div>
+          <div class="ctrl-row">
+            <span class="ctrl-label">Tertiary</span>
+            <input type="color" id="ctrl-col2" value="#000000" oninput="onColor(2,this.value)">
+          </div>
+        </div>
+      </div>
+
+      <div class="ctrl-section">
+        <div class="ctrl-head" onclick="toggleCtrl(this)">Effect Settings <span class="arrow">▾</span></div>
+        <div class="ctrl-body">
+          <div class="ctrl-row">
+            <span class="ctrl-label">Speed</span>
+            <input type="range" id="ctrl-sx" min="0" max="255" value="128" oninput="onSpeed(this)">
+            <span class="range-val" id="ctrl-sx-val"
+              onclick="editVal(this,'ctrl-sx',0,255,'sx')">128</span>
+          </div>
+          <div class="ctrl-row">
+            <span class="ctrl-label">Intensity</span>
+            <input type="range" id="ctrl-ix" min="0" max="255" value="128" oninput="onIntensity(this)">
+            <span class="range-val" id="ctrl-ix-val"
+              onclick="editVal(this,'ctrl-ix',0,255,'ix')">128</span>
+          </div>
+          <div class="ctrl-row">
+            <span class="ctrl-label">Palette</span>
+            <select id="ctrl-pal" onchange="onPalette(this)"></select>
+          </div>
+        </div>
+      </div>
+
+      <div class="ctrl-section">
+        <div class="ctrl-head" onclick="toggleCtrl(this)">Transition <span class="arrow">▾</span></div>
+        <div class="ctrl-body">
+          <div class="ctrl-row">
+            <span class="ctrl-label">Time</span>
+            <input type="range" id="ctrl-tr" min="0" max="255" value="7" oninput="onTransition(this)">
+            <span class="range-val" id="ctrl-tr-val"
+              onclick="editVal(this,'ctrl-tr',0,255,'tr')">0.7s</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Main panel -->
+    <div id="main">
+      <div class="tabs">
+        <div class="tab active" onclick="switchTab('effects',this)">Effects</div>
+        <div class="tab" onclick="switchTab('presets',this)">Presets</div>
+      </div>
+
+      <div class="tab-pane active" id="tab-effects">
+        <div id="effect-preview">
+          <img id="ep-img" src="" alt="">
+          <div>
+            <div id="ep-name">—</div>
+            <div id="ep-hint"></div>
+          </div>
+        </div>
+        <div class="effect-grid" id="effect-grid"></div>
+      </div>
+
+      <div class="tab-pane" id="tab-presets">
+        <div class="preset-grid" id="preset-grid"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── STATE ────────────────────────────────────────────────────────
+let baseUrl = '';
+let deviceState = {};
+let deviceInfo = {};
+let effects = [];
+let palettes = [];
+let presets = {};
+let pollTimer = null;
+let debounceTimer = null;
+let suppressPoll = false;
+let pendingPatch = {};
+let pendingSegPatch = {};
+let gifObserver = null;
+
+// ── 1. CONFIRM ON RELOAD ─────────────────────────────────────────
+window.addEventListener('beforeunload', e => {
+  if (baseUrl) { e.preventDefault(); e.returnValue = ''; }
+});
+
+// ── RECENT URLs ──────────────────────────────────────────────────
+const RECENT_KEY = 'wled_recent_urls';
+function getRecent() {
+  try { return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); } catch { return []; }
+}
+function saveRecent(url) {
+  let list = getRecent().filter(u => u !== url);
+  list.unshift(url);
+  localStorage.setItem(RECENT_KEY, JSON.stringify(list.slice(0, 6)));
+}
+// 3. Fix: bind events via JS to avoid quote-escaping issues in onclick
+function renderRecent() {
+  const list = getRecent();
+  const sec = document.getElementById('recent-section');
+  if (!list.length) { sec.style.display = 'none'; return; }
+  sec.style.display = 'block';
+  const container = document.getElementById('recent-list');
+  container.innerHTML = list.map(u =>
+    `<div class="recent-item">
+      <span class="ri-url">${esc(u)}</span><span class="ri-go">Connect →</span>
+    </div>`
+  ).join('');
+  container.querySelectorAll('.recent-item').forEach((el, i) => {
+    el.addEventListener('click', () => useRecent(list[i]));
+  });
+}
+function useRecent(url) {
+  document.getElementById('url-input').value = url;
+  connect();
+}
+
+// ── UTILS ────────────────────────────────────────────────────────
+function normalizeUrl(url) {
+  url = url.trim();
+  if (!/^https?:\/\//i.test(url)) url = 'http://' + url;
+  return url.replace(/\/+$/, '');
+}
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function rgbToHex([r,g,b] = [0,0,0]) {
+  return '#' + [r,g,b].map(x => (x||0).toString(16).padStart(2,'0')).join('');
+}
+function hexToRgb(hex) {
+  const m = hex.match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
+  return m ? [parseInt(m[1],16), parseInt(m[2],16), parseInt(m[3],16)] : [0,0,0];
+}
+
+// ── API ──────────────────────────────────────────────────────────
+async function api(path, body = null) {
+  const opts = body
+    ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
+    : {};
+  const ctrl = new AbortController();
+  const tid = setTimeout(() => ctrl.abort(), 5000);
+  try {
+    const r = await fetch(baseUrl + path, { ...opts, signal: ctrl.signal });
+    clearTimeout(tid);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  } catch (e) { clearTimeout(tid); throw e; }
+}
+
+// ── CONNECT ──────────────────────────────────────────────────────
+async function connect() {
+  const raw = document.getElementById('url-input').value;
+  if (!raw.trim()) return;
+  baseUrl = normalizeUrl(raw);
+  const btn = document.getElementById('btn-connect');
+  btn.textContent = 'Connecting…';
+  btn.disabled = true;
+  document.getElementById('connect-err').style.display = 'none';
+
+  try {
+    const [state, info] = await Promise.all([api('/json/state'), api('/json/info')]);
+    const [effs, pals] = await Promise.all([
+      api('/json/eff').catch(() => []),
+      api('/json/pal').catch(() => [])
+    ]);
+    let presetData = {};
+    try {
+      const ctrl = new AbortController();
+      const tid = setTimeout(() => ctrl.abort(), 3000);
+      const r = await fetch(baseUrl + '/presets.json', { signal: ctrl.signal });
+      clearTimeout(tid);
+      presetData = await r.json();
+    } catch {}
+
+    deviceState = state;
+    deviceInfo = info;
+    effects = Array.isArray(effs) ? effs : [];
+    palettes = Array.isArray(pals) ? pals : [];
+    presets = presetData;
+
+    saveRecent(baseUrl);
+    buildApp();
+    document.getElementById('connect-screen').style.display = 'none';
+    document.getElementById('app').classList.add('visible');
+    startPolling();
+  } catch (e) {
+    const err = document.getElementById('connect-err');
+    err.textContent = 'Could not connect: ' + (e.message || 'unknown error');
+    err.style.display = 'block';
+  } finally {
+    btn.textContent = 'Connect';
+    btn.disabled = false;
+  }
+}
+
+// ── DISCONNECT ───────────────────────────────────────────────────
+function disconnect() {
+  stopPolling();
+  baseUrl = '';
+  document.getElementById('app').classList.remove('visible');
+  document.getElementById('connect-screen').style.display = 'flex';
+  renderRecent();
+}
+
+// ── BUILD APP ────────────────────────────────────────────────────
+function buildApp() {
+  document.getElementById('device-name').textContent = deviceInfo.name || 'WLED Device';
+  document.getElementById('device-url-label').textContent = baseUrl.replace(/^https?:\/\//, '');
+
+  const sel = document.getElementById('ctrl-pal');
+  sel.innerHTML = palettes.map((p, i) => `<option value="${i}">${esc(p)}</option>`).join('');
+
+  buildEffectGrid();
+  buildPresetGrid();
+  applyStateToUI();
+}
+
+// ── 4. EFFECTS GRID with GIF backgrounds ────────────────────────
+function buildEffectGrid() {
+  const grid = document.getElementById('effect-grid');
+  grid.innerHTML = effects.map((name, id) => {
+    if (!name || name.startsWith('RSVD')) return '';
+    return `<button class="grid-btn" data-fx="${id}" onclick="setEffect(${id})"
+        onmouseenter="previewEffect(${id})" onmouseleave="clearPreview()">
+      <span class="btn-id">${id}</span>
+      <span class="btn-name">${esc(name)}</span>
+    </button>`;
+  }).join('');
+
+  // Lazy-load GIF thumbnails as background images via IntersectionObserver
+  if (gifObserver) gifObserver.disconnect();
+  gifObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      const btn = entry.target;
+      const id = btn.dataset.fx;
+      if (id === undefined) return;
+      const pad = String(id).padStart(3, '0');
+      btn.style.backgroundImage =
+        `url(https://raw.githubusercontent.com/scottrbailey/WLED-Utils/master/gifs/FX_${pad}.gif)`;
+      gifObserver.unobserve(btn);
+    });
+  }, { root: document.getElementById('tab-effects'), rootMargin: '150px 0px' });
+
+  grid.querySelectorAll('.grid-btn').forEach(btn => gifObserver.observe(btn));
+}
+
+// ── PRESETS GRID ─────────────────────────────────────────────────
+function buildPresetGrid() {
+  const grid = document.getElementById('preset-grid');
+  const entries = Object.entries(presets).filter(([k]) => k !== '0' && !isNaN(Number(k)));
+  if (!entries.length) {
+    grid.innerHTML = '<div class="empty-msg">No presets found on this device.</div>';
+    return;
+  }
+  entries.sort((a, b) => Number(a[0]) - Number(b[0]));
+  grid.innerHTML = entries.map(([id, p]) => {
+    const name = p.n || `Preset ${id}`;
+    return `<button class="grid-btn" data-ps="${id}" onclick="applyPreset(${id})">
+      <span class="btn-id">#${id}</span>
+      <span class="btn-name">${esc(name)}</span>
+    </button>`;
+  }).join('');
+}
+
+// ── STATE → UI ───────────────────────────────────────────────────
+function applyStateToUI() {
+  const s = deviceState;
+  const seg = s.seg?.[0] || {};
+
+  setUIPower(!!s.on);
+
+  const bri = s.bri ?? 128;
+  document.getElementById('ctrl-bri').value = bri;
+  document.getElementById('ctrl-bri-val').textContent = bri;
+
+  const col = seg.col || [[255,0,0],[0,0,0],[0,0,0]];
+  for (let i = 0; i < 3; i++) document.getElementById(`ctrl-col${i}`).value = rgbToHex(col[i] || [0,0,0]);
+
+  const sx = seg.sx ?? 128;
+  document.getElementById('ctrl-sx').value = sx;
+  document.getElementById('ctrl-sx-val').textContent = sx;
+
+  const ix = seg.ix ?? 128;
+  document.getElementById('ctrl-ix').value = ix;
+  document.getElementById('ctrl-ix-val').textContent = ix;
+
+  if (seg.pal !== undefined) document.getElementById('ctrl-pal').value = seg.pal;
+
+  const tr = s.transition ?? 7;
+  document.getElementById('ctrl-tr').value = tr;
+  document.getElementById('ctrl-tr-val').textContent = (tr * 0.1).toFixed(1) + 's';
+
+  updateActiveEffect(seg.fx ?? 0);
+  updateActivePreset(s.ps);
+  updatePreviewBar(seg.fx ?? 0);
+}
+
+function setUIPower(on) {
+  document.getElementById('btn-power').classList.toggle('on', on);
+  document.getElementById('ctrl-power-btn').classList.toggle('on', on);
+  document.getElementById('power-label').textContent = on ? 'On' : 'Off';
+  document.getElementById('ctrl-power-label').textContent = on ? 'On' : 'Off';
+}
+function updateActiveEffect(fxId) {
+  document.querySelectorAll('#effect-grid .grid-btn').forEach(btn => {
+    btn.classList.toggle('active', Number(btn.dataset.fx) === fxId);
+  });
+}
+function updateActivePreset(psId) {
+  document.querySelectorAll('#preset-grid .grid-btn').forEach(btn => {
+    btn.classList.toggle('active', psId !== undefined && Number(btn.dataset.ps) === psId);
+  });
+}
+function updatePreviewBar(fxId) {
+  if (effects[fxId]) {
+    document.getElementById('ep-name').textContent = effects[fxId];
+    document.getElementById('ep-hint').textContent = `ID: ${fxId} · active`;
+  } else {
+    document.getElementById('ep-name').textContent = '—';
+    document.getElementById('ep-hint').textContent = '';
+  }
+}
+
+// ── EFFECT PREVIEW (hover bar) ───────────────────────────────────
+function previewEffect(id) {
+  const img = document.getElementById('ep-img');
+  const pad = String(id).padStart(3, '0');
+  img.style.display = 'block';
+  img.onerror = () => { img.style.display = 'none'; };
+  img.src = `https://raw.githubusercontent.com/scottrbailey/WLED-Utils/master/gifs/FX_${pad}.gif`;
+  document.getElementById('ep-name').textContent = effects[id] || `Effect ${id}`;
+  document.getElementById('ep-hint').textContent = `ID: ${id}`;
+}
+function clearPreview() {
+  document.getElementById('ep-img').style.display = 'none';
+  updatePreviewBar((deviceState.seg?.[0]?.fx) ?? 0);
+}
+
+// ── 2. EDITABLE RANGE VALUES ─────────────────────────────────────
+function editVal(span, rangeId, min, max, handler) {
+  const range = document.getElementById(rangeId);
+  const cur = parseInt(range.value);
+  const inp = document.createElement('input');
+  inp.type = 'number';
+  inp.className = 'range-val-input';
+  inp.value = cur;
+  inp.min = min;
+  inp.max = max;
+  span.replaceWith(inp);
+  inp.focus();
+  inp.select();
+
+  function commit() {
+    let v = parseInt(inp.value);
+    if (isNaN(v)) v = cur;
+    v = Math.max(min, Math.min(max, v));
+    range.value = v;
+    applyRangeHandler(handler, v, span);
+    inp.replaceWith(span);
+  }
+  inp.addEventListener('blur', commit);
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter') inp.blur();
+    if (e.key === 'Escape') inp.replaceWith(span);
+  });
+}
+function applyRangeHandler(handler, v, span) {
+  switch (handler) {
+    case 'bri': span.textContent = v; patchState({ bri: v }); break;
+    case 'sx':  span.textContent = v; patchState({}, { sx: v }); break;
+    case 'ix':  span.textContent = v; patchState({}, { ix: v }); break;
+    case 'tr':  span.textContent = (v * 0.1).toFixed(1) + 's'; patchState({ transition: v }); break;
+  }
+}
+
+// ── CONTROLS TOGGLE ──────────────────────────────────────────────
+function toggleCtrl(head) {
+  const body = head.nextElementSibling;
+  body.classList.toggle('collapsed');
+  head.querySelector('.arrow').textContent = body.classList.contains('collapsed') ? '▸' : '▾';
+}
+
+// ── STATE PATCH ──────────────────────────────────────────────────
+function patchState(top = {}, seg = {}) {
+  Object.assign(pendingPatch, top);
+  Object.assign(pendingSegPatch, seg);
+  suppressPoll = true;
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(flushState, 350);
+}
+async function flushState() {
+  const body = { ...pendingPatch };
+  if (Object.keys(pendingSegPatch).length) body.seg = [pendingSegPatch];
+  pendingPatch = {};
+  pendingSegPatch = {};
+  try {
+    const result = await api('/json/state', body);
+    if (result) Object.assign(deviceState, result);
+    updateActiveEffect(deviceState.seg?.[0]?.fx ?? 0);
+    updateActivePreset(deviceState.ps);
+  } catch (e) { showToast('Error: ' + (e.message || 'failed')); }
+  setTimeout(() => { suppressPoll = false; }, 800);
+}
+
+// ── CONTROL HANDLERS ─────────────────────────────────────────────
+function togglePower() {
+  const on = !deviceState.on;
+  deviceState.on = on;
+  setUIPower(on);
+  patchState({ on });
+}
+function onBri(el) {
+  const v = parseInt(el.value);
+  document.getElementById('ctrl-bri-val').textContent = v;
+  patchState({ bri: v });
+}
+function onColor(idx, hex) {
+  const rgb = hexToRgb(hex);
+  const seg = deviceState.seg?.[0];
+  if (seg) { if (!seg.col) seg.col = [[255,0,0],[0,0,0],[0,0,0]]; seg.col[idx] = rgb; }
+  const col = seg?.col || [[255,0,0],[0,0,0],[0,0,0]];
+  patchState({}, { col });
+}
+function onSpeed(el) {
+  const v = parseInt(el.value);
+  document.getElementById('ctrl-sx-val').textContent = v;
+  patchState({}, { sx: v });
+}
+function onIntensity(el) {
+  const v = parseInt(el.value);
+  document.getElementById('ctrl-ix-val').textContent = v;
+  patchState({}, { ix: v });
+}
+function onPalette(el) { patchState({}, { pal: parseInt(el.value) }); }
+function onTransition(el) {
+  const v = parseInt(el.value);
+  document.getElementById('ctrl-tr-val').textContent = (v * 0.1).toFixed(1) + 's';
+  patchState({ transition: v });
+}
+function setEffect(id) {
+  if (deviceState.seg?.[0]) deviceState.seg[0].fx = id;
+  updateActiveEffect(id);
+  updatePreviewBar(id);
+  patchState({}, { fx: id });
+}
+async function applyPreset(id) {
+  suppressPoll = true;
+  try {
+    await api('/json/state', { ps: id });
+    showToast(`Preset #${id} applied`);
+    setTimeout(async () => {
+      try { deviceState = await api('/json/state'); applyStateToUI(); } catch {}
+      suppressPoll = false;
+    }, 700);
+  } catch (e) { showToast('Error: ' + e.message); suppressPoll = false; }
+}
+
+// ── TABS ─────────────────────────────────────────────────────────
+function switchTab(name, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+}
+
+// ── POLLING ──────────────────────────────────────────────────────
+function startPolling() {
+  stopPolling();
+  pollTimer = setInterval(async () => {
+    if (suppressPoll) return;
+    try { deviceState = await api('/json/state'); applyStateToUI(); } catch {}
+  }, 3000);
+}
+function stopPolling() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } }
+
+// ── TOAST ────────────────────────────────────────────────────────
+let toastTimer = null;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2000);
+}
+
+// ── INIT ─────────────────────────────────────────────────────────
+renderRecent();
+document.getElementById('url-input').addEventListener('keydown', e => { if (e.key === 'Enter') connect(); });
+</script>
+</body>
+</html>
